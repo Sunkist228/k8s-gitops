@@ -6,3 +6,5 @@ resources:
   - secrets/grafana-admin-secret.yaml
   - secrets/alertmanager-telegram-secret.yaml
   - dashboards/argocd-health-dashboard-cm.yaml
+  - dashboards/k8s-cluster-overview-dashboard-cm.yaml
+  - dashboards/k8s-namespace-workloads-dashboard-cm.yaml
