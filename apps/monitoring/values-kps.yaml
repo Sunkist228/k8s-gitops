@@ -62,29 +62,24 @@ alertmanager:
       {{ define "telegram.default.message" }}
       <b>{{ .Status | toUpper }}: {{ .CommonLabels.alertname }}</b>
       Severity: <b>{{ .CommonLabels.severity }}</b>
-      Namespace: <code>{{ .CommonLabels.namespace }}</code>
-      {{- with .CommonLabels.deployment }}
-      Deployment: <code>{{ . }}</code>
-      {{- end }}
-      {{- with .CommonLabels.pod }}
-      Pod: <code>{{ . }}</code>
-      {{- end }}
-      {{- with .CommonLabels.container }}
-      Container: <code>{{ . }}</code>
-      {{- end }}
+      Total: firing={{ len .Alerts.Firing }}, resolved={{ len .Alerts.Resolved }}
       {{- with .CommonAnnotations.summary }}
       Summary: {{ . }}
-      {{- end }}
-      {{- with .CommonAnnotations.description }}
-      Details: {{ . }}
       {{- end }}
       {{- with (index .CommonAnnotations "runbook_url") }}
       Runbook: {{ . }}
       {{- end }}
-      {{- if gt (len .Alerts) 0 }}
-      Source: {{ (index .Alerts 0).GeneratorURL }}
+
+      {{- if gt (len .Alerts.Firing) 0 }}
+      <b>Firing instances:</b>
+      {{- range .Alerts.Firing }}
+      - ns=<code>{{ .Labels.namespace }}</code>, pod=<code>{{ .Labels.pod }}</code>{{- with .Labels.container }}, container=<code>{{ . }}</code>{{- end }}
+        {{- with .Annotations.summary }} {{ . }}{{ else }} {{ .Annotations.description }}{{ end }}
       {{- end }}
-      Group size: firing={{ len .Alerts.Firing }}, resolved={{ len .Alerts.Resolved }}
+      {{- end }}
+
+      Prometheus: https://prometheus.k8s.devflux.ru/alerts
+      Grafana: https://grafana.k8s.devflux.ru/alerting/list
       {{ end }}
   stringConfig: |
     global:
