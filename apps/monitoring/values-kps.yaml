@@ -39,7 +39,7 @@ alertmanager:
               storage: 5Gi
     secrets:
       - alertmanager-telegram-secret
-  config:
+  stringConfig: |
     global:
       resolve_timeout: 5m
     route:
@@ -51,9 +51,7 @@ alertmanager:
       group_wait: 30s
       group_interval: 5m
       repeat_interval: 4h
-      routes: []
     receivers:
-      - name: "null"
       - name: telegram-monitoring
         telegram_configs:
           - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token
