@@ -10,6 +10,3 @@ resources:
 - service.yaml
 - ingress.yaml
 - networkpolicy-egress.yaml
-
-commonLabels:
-  app: ingress-manager-api
