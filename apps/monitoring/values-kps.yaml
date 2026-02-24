@@ -58,6 +58,33 @@ alertmanager:
           - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token
             chat_id: 1320865933
             parse_mode: HTML
+            message: |-
+              <b>{{ .Status | toUpper }}: {{ .CommonLabels.alertname }}</b>
+              Severity: <b>{{ .CommonLabels.severity }}</b>
+              Namespace: <code>{{ .CommonLabels.namespace }}</code>
+              {{- with .CommonLabels.deployment }}
+              Deployment: <code>{{ . }}</code>
+              {{- end }}
+              {{- with .CommonLabels.pod }}
+              Pod: <code>{{ . }}</code>
+              {{- end }}
+              {{- with .CommonLabels.container }}
+              Container: <code>{{ . }}</code>
+              {{- end }}
+
+              {{- with .CommonAnnotations.summary }}
+              Summary: {{ . }}
+              {{- end }}
+              {{- with .CommonAnnotations.description }}
+              Details: {{ . }}
+              {{- end }}
+              {{- with (index .CommonAnnotations "runbook_url") }}
+              Runbook: {{ . }}
+              {{- end }}
+              {{- if gt (len .Alerts) 0 }}
+              Source: {{ (index .Alerts 0).GeneratorURL }}
+              {{- end }}
+              Group size: firing={{ len .Alerts.Firing }}, resolved={{ len .Alerts.Resolved }}
             send_resolved: true
 
 grafana:
