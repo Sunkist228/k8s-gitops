@@ -5,5 +5,4 @@ resources:
   - namespace.yaml
   - secrets/grafana-admin-secret.yaml
   - secrets/alertmanager-telegram-secret.yaml
-  - servicemonitors/common-apps-servicemonitor.yaml
   - dashboards/argocd-health-dashboard-cm.yaml
