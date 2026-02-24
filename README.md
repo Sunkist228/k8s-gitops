@@ -41,3 +41,17 @@ The original manifests from `E:\local\k8s` were refactored into Kustomize-friend
 - Monolithic YAML files were split into smaller logical components (Deployment, Service, PVC, etc.).
 - Namespaces are managed via Kustomize or ArgoCD `syncOptions` (`CreateNamespace=true`).
 - Sensitive data like Secrets should be further managed using tools like Sealed Secrets or External Secrets.
+
+## Ingress API Delivery Flow
+
+`ingress-api` is deployed from `apps/ingress-api` by ArgoCD App-of-Apps (`bootstrap/apps/apps.yaml`).
+
+Pipeline contract:
+- Jenkins builds and pushes image to Harbor.
+- Jenkins commits only the image tag change in `apps/ingress-api/deployment.yaml`.
+- ArgoCD auto-sync (`prune + selfHeal`) applies the new revision.
+
+Runtime startup hardening is configured via `apps/ingress-api/config.yaml`:
+- `DB_STARTUP_MAX_ATTEMPTS`
+- `DB_STARTUP_RETRY_DELAY_SECONDS`
+- `DB_STARTUP_FAIL_FAST`

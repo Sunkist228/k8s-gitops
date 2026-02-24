@@ -32,6 +32,9 @@ data:
   AUTO_DOMAIN_SERVICE_PORT: "80"
   AUTO_DOMAIN_NAMESPACE: "devops-tools"
   AUTO_DOMAIN_DISABLE: "0"
+  DB_STARTUP_MAX_ATTEMPTS: "20"
+  DB_STARTUP_RETRY_DELAY_SECONDS: "3"
+  DB_STARTUP_FAIL_FAST: "1"
   AUTO_DOMAINS_BATCH: |
     ingress-api.k8s.devflux.ru=ingress-manager-service:80
     youtrack.devflux.ru=youtrack-service:web
