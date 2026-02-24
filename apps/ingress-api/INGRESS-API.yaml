@@ -22,7 +22,7 @@ metadata:
   namespace: devops-tools
 type: Opaque
 stringData:
-  DATABASE_URL: "postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres.db.devflux.ru:5432/ingressdb"
+  DATABASE_URL: "postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres-service.databases.svc.cluster.local:5432/ingressdb"
 ---
 # ConfigMap с конфигурацией Kubernetes клиента
 apiVersion: v1

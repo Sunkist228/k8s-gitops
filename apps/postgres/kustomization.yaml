@@ -6,6 +6,7 @@ namespace: databases
 resources:
   - resources.yaml
   - statefulset.yaml
+  - networkpolicy.yaml
 
 # Note: Secrets (postgres-secret, db-ssl) should be managed via sealed-secrets or external-secrets in a real setup.
 # Here we just list the resources that are present in the files.

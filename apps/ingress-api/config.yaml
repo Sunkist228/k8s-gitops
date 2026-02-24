@@ -12,7 +12,8 @@ metadata:
   name: ingress-manager-db
 type: Opaque
 stringData:
-  DATABASE_URL: "postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres.db.devflux.ru:5432/ingressdb"
+  # In-cluster: postgresql in databases namespace. For external use postgres.db.devflux.ru
+  DATABASE_URL: "postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres-service.databases.svc.cluster.local:5432/ingressdb"
 ---
 apiVersion: v1
 kind: ConfigMap
