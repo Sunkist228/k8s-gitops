@@ -19,7 +19,7 @@ spec:
       - name: harbor-creds
       containers:
       - name: api
-        image: harbor.devflux.ru/devops-tools/ingress-manager-api:23
+        image: harbor.devflux.ru/devops-tools/ingress-manager-api:24
         imagePullPolicy: Always
         command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
         ports:
