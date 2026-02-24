@@ -52,6 +52,7 @@ alertmanager:
       group_interval: 5m
       repeat_interval: 4h
     receivers:
+      - name: "null"
       - name: telegram-monitoring
         telegram_configs:
           - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token
