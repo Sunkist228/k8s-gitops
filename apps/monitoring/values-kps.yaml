@@ -51,6 +51,7 @@ alertmanager:
       group_wait: 30s
       group_interval: 5m
       repeat_interval: 4h
+      routes: []
     receivers:
       - name: "null"
       - name: telegram-monitoring
