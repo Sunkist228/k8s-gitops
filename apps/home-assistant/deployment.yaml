@@ -24,6 +24,9 @@ spec:
         effect: NoSchedule
       initContainers:
       - name: config-trusted-proxies
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
         image: busybox:1.36
         command: ["sh", "/scripts/trusted_proxies.sh"]
         volumeMounts:
