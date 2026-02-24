@@ -1,75 +1,278 @@
 {
+  "uid": "argocd-health-overview",
   "title": "ArgoCD Health Overview",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
+  "tags": ["argocd", "gitops"],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
+      "title": "Total Apps",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "count(argocd_app_info) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Healthy Apps",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "count(argocd_app_info{health_status=\"Healthy\"}) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "OutOfSync Apps",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "count(argocd_app_info{sync_status!=\"Synced\"}) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Degraded Apps",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "count(argocd_app_info{health_status=~\"Degraded|Missing|Unknown|Suspended\"}) or vector(0)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
       "title": "Applications by Health",
       "type": "piechart",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
       "targets": [
         {
           "expr": "sum by (health_status) (argocd_app_info)",
           "legendFormat": "{{health_status}}",
           "refId": "A"
         }
-      ]
+      ],
+      "options": {
+        "displayLabels": ["name", "percent", "value"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "pieType": "pie",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
     },
     {
-      "id": 2,
+      "id": 6,
       "title": "Applications by Sync Status",
       "type": "piechart",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
       "targets": [
         {
           "expr": "sum by (sync_status) (argocd_app_info)",
           "legendFormat": "{{sync_status}}",
           "refId": "A"
         }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "OutOfSync / Degraded Apps",
-      "type": "table",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
-      "targets": [
-        {
-          "expr": "argocd_app_info{sync_status!=\"Synced\"} or argocd_app_info{health_status=\"Degraded\"}",
-          "format": "table",
-          "instant": true,
-          "refId": "A"
+      ],
+      "options": {
+        "displayLabels": ["name", "percent", "value"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "pieType": "pie",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ]
+      }
     },
     {
-      "id": 4,
-      "title": "Sync Operations (rate)",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "targets": [
-        {
-          "expr": "sum by (phase) (rate(argocd_app_sync_total[5m]))",
-          "legendFormat": "{{phase}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 5,
+      "id": 7,
       "title": "Top Namespaces with Non-Synced Apps",
       "type": "barchart",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
       "targets": [
         {
           "expr": "topk(10, sum by (namespace) (argocd_app_info{sync_status!=\"Synced\"}))",
           "legendFormat": "{{namespace}}",
           "refId": "A"
         }
-      ]
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "orientation": "horizontal",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Problem Applications (OutOfSync / Non-Healthy)",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 16, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "argocd_app_info{sync_status!=\"Synced\"} or argocd_app_info{health_status!=\"Healthy\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 9,
+      "title": "Sync Operations (1h increase)",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum by (phase) (increase(argocd_app_sync_total[1h]))",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "drawStyle": "line",
+          "lineInterpolation": "linear",
+          "lineWidth": 2,
+          "fillOpacity": 20,
+          "showPoints": "auto",
+          "spanNulls": true
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["lastNotNull", "max"]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     }
   ],
   "templating": { "list": [] },
