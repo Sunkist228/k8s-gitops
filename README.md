@@ -9,7 +9,7 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
   - `home-assistant/`: Home Assistant deployment.
   - `n8n/`: n8n automation tool deployment.
   - `postgres/`: PostgreSQL StatefulSet and related resources.
-  - `vault/`: HashiCorp Vault Helm values (HA Raft mode).
+  - `vault/`: Vendored HashiCorp Vault Helm chart + local values (HA Raft mode).
 - `bootstrap/`: ArgoCD "App-of-Apps" manifests for cluster initialization.
   - `root-app.yaml`: The main application that watches the `bootstrap/apps/` folder.
   - `apps/apps.yaml`: Definitions for all applications in the cluster.

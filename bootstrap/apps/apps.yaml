@@ -74,17 +74,14 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
-  sources:
-    - repoURL: https://helm.releases.hashicorp.com
-      chart: vault
-      targetRevision: 0.32.0
-      helm:
-        releaseName: vault
-        valueFiles:
-          - $values/apps/vault/values-vault.yaml
-    - repoURL: https://github.com/Sunkist228/k8s-gitops.git
-      targetRevision: HEAD
-      ref: values
+  source:
+    repoURL: https://github.com/Sunkist228/k8s-gitops.git
+    targetRevision: HEAD
+    path: apps/vault/vault
+    helm:
+      releaseName: vault
+      valueFiles:
+        - values-vault.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: vault

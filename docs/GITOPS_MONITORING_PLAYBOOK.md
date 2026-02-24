@@ -9,8 +9,8 @@ The goal is deterministic, repeatable, and auditable operations through Git only
 
 ## Core Principles
 1. Git is the single source of truth.
-2. All cluster changes must come from ArgoCD sync.
-3. No direct `kubectl apply/edit/patch` for persistent configuration.
+2. All cluster changes must be delivered through Git commits and applied by ArgoCD sync.
+3. Direct `kubectl apply/edit/patch` is forbidden for persistent configuration.
 4. Secrets must be managed intentionally and consistently.
 5. Monitoring and alerting are part of platform baseline, not optional add-ons.
 
@@ -154,6 +154,7 @@ When adding a new system:
 2. Drift must be treated as incident and removed.
 3. Platform updates should include rollback plan.
 4. Every alert rule must have an owner and runbook.
+5. Any persistent change is valid only when merged to Git and reconciled by ArgoCD.
 
 ## Definition of Done
 A system is "GitOps + Monitoring Ready" when:
