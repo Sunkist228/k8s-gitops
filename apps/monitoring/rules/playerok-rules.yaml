@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: playerok-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: playerok.dev.rules
+      rules:
+        - alert: PlayerokBackendDown
+          expr: max by (namespace, service) (up{namespace="playerok-dev", service="backend"}) < 1
+          for: 2m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok backend is down in playerok-dev
+            description: Prometheus target for service "backend" in namespace "playerok-dev" is not reachable for 2 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokBackendHigh5xx
+          expr: |
+            sum(rate(http_requests_total{namespace="playerok-dev", service="backend", status=~"5.."}[5m]))
+              /
+            clamp_min(sum(rate(http_requests_total{namespace="playerok-dev", service="backend"}[5m])), 0.1)
+              > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok backend has high 5xx error ratio
+            description: 5xx responses are above 5% for the backend service in playerok-dev for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokBackendHighLatencyP95
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{namespace="playerok-dev", service="backend"}[5m])
+              )
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok backend p95 latency is high
+            description: p95 latency for backend requests in playerok-dev is above 1 second for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokFrontendDeploymentUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace="playerok-dev", deployment="frontend"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok frontend deployment has unavailable replicas
+            description: Deployment "frontend" in namespace "playerok-dev" has unavailable replicas for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts

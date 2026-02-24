@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: playerok
+  labels:
+    app: backend
+    environment: prod
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+      environment: prod
+  template:
+    metadata:
+      labels:
+        app: backend
+        environment: prod
+        component: api
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      containers:
+        - name: backend
+          image: harbor.devflux.ru/playerok-devflux/backend-prod:1
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000

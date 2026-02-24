@@ -316,6 +316,29 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  name: playerok-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Sunkist228/k8s-gitops.git
+    targetRevision: HEAD
+    path: apps/playerok-dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: playerok-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
   name: jenkins-notify
   namespace: argocd
   finalizers:

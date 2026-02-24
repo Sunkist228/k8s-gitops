@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: playerok
+  labels:
+    app: frontend
+    environment: prod
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+      environment: prod
+  template:
+    metadata:
+      labels:
+        app: frontend
+        environment: prod
+        component: frontend
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      containers:
+        - name: frontend
+          image: harbor.devflux.ru/playerok-devflux/frontend-prod:1
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
