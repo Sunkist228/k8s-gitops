@@ -92,12 +92,7 @@ alertmanager:
       group_wait: 1m
       group_interval: 10m
       repeat_interval: 12h
-      routes:
-        - receiver: "null"
-          matchers:
-            - alertname=~"KubeSchedulerDown|KubeControllerManagerDown|KubeProxyDown"
     receivers:
-      - name: "null"
       - name: telegram-monitoring
         telegram_configs:
           - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token
@@ -141,3 +136,7 @@ grafana:
 
 defaultRules:
   create: true
+  rules:
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeScheduler: false
