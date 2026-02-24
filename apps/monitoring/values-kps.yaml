@@ -57,6 +57,8 @@ alertmanager:
         telegram_configs:
           - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token
             chat_id: 1320865933
+            parse_mode: ""
+            message: 'Alert: {{ .CommonLabels.alertname }}; severity={{ .CommonLabels.severity }}; namespace={{ .CommonLabels.namespace }}'
             send_resolved: true
 
 grafana:
