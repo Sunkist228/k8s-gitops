@@ -1,0 +1,175 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-playerok-dev
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  playerok-dev.json: |
+    {
+      "title": "Playerok Dev Backend",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["playerok", "playerok-dev"],
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "custom",
+            "query": "playerok-dev",
+            "current": {
+              "selected": true,
+              "text": "playerok-dev",
+              "value": "playerok-dev"
+            },
+            "hide": 0
+          },
+          {
+            "name": "service",
+            "type": "custom",
+            "query": "backend",
+            "current": {
+              "selected": true,
+              "text": "backend",
+              "value": "backend"
+            },
+            "hide": 0
+          },
+          {
+            "name": "pod",
+            "type": "query",
+            "query": "label_values(kube_pod_info{namespace=\"$namespace\",pod=~\"backend.*\"}, pod)",
+            "includeAll": true,
+            "multi": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": "$__all"
+            },
+            "refresh": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Target Up",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "sum(up{namespace=\"$namespace\",service=\"$service\"}) or vector(0)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Request Rate (RPS)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"$namespace\",service=\"$service\"}[5m])) or vector(0)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "5xx Ratio",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [
+            {
+              "expr": "(sum(rate(http_requests_total{namespace=\"$namespace\",service=\"$service\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{namespace=\"$namespace\",service=\"$service\"}[5m])), 0.1)) or vector(0)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Pod Restarts",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"$namespace\",pod=~\"$pod\"}) or vector(0)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Latency p50/p95/p99 (seconds)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) or vector(0)",
+              "legendFormat": "p50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) or vector(0)",
+              "legendFormat": "p95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\"$namespace\",service=\"$service\"}[5m]))) or vector(0)",
+              "legendFormat": "p99",
+              "refId": "C"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "CPU Usage by Pod (cores)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",pod=~\"$pod\",container!=\"\",image!=\"\"}[5m]))",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "title": "Memory Usage by Pod (MiB)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",pod=~\"$pod\",container!=\"\",image!=\"\"}) / 1024 / 1024",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "Deployment Desired vs Available",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [
+            {
+              "expr": "sum(kube_deployment_spec_replicas{namespace=\"$namespace\",deployment=\"backend\"}) or vector(0)",
+              "legendFormat": "desired",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(kube_deployment_status_replicas_available{namespace=\"$namespace\",deployment=\"backend\"}) or vector(0)",
+              "legendFormat": "available",
+              "refId": "B"
+            }
+          ]
+        }
+      ],
+      "annotations": {"list": []}
+    }

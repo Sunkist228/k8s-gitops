@@ -6,8 +6,13 @@ resources:
   - externalsecrets/grafana-admin-externalsecret.yaml
   - externalsecrets/alertmanager-telegram-externalsecret.yaml
   - servicemonitors/argocd-servicemonitors.yaml
+  - servicemonitors/jenkins-notify-servicemonitor.yaml
+  - servicemonitors/ingress-api-servicemonitor.yaml
   - servicemonitors/playerok-backend-servicemonitor.yaml
   - rules/playerok-rules.yaml
   - dashboards/argocd-health-dashboard-cm.yaml
+  - dashboards/jenkins-notify-dashboard-cm.yaml
+  - dashboards/ingress-api-dashboard-cm.yaml
+  - dashboards/playerok-dev-dashboard-cm.yaml
   - dashboards/k8s-cluster-overview-dashboard-cm.yaml
   - dashboards/k8s-namespace-workloads-dashboard-cm.yaml
