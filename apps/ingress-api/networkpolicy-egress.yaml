@@ -17,6 +17,8 @@ spec:
       podSelector:
         matchLabels:
           app: postgres
+    - ipBlock:
+        cidr: 10.152.183.236/32
     ports:
     - protocol: TCP
       port: 5432
