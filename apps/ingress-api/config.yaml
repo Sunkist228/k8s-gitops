@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-manager-secret
+type: Opaque
+stringData:
+  API_KEY: "YOUR_SUPER_SECRET_API_KEY_HERE"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-manager-db
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres.db.devflux.ru:5432/ingressdb"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-manager-config
+data:
+  INGRESS_CLASS_NAME: "public"
+  CLUSTER_ISSUER_NAME: "letsencrypt-prod"
+  INGRESS_NAMESPACE: "ingress"
+  INGRESS_DAEMONSET_SELECTOR: "microk8s-application=nginx-ingress-microk8s"
+  TCP_CONFIGMAP_NAME: "nginx-ingress-tcp-microk8s-conf"
+  UDP_CONFIGMAP_NAME: "nginx-ingress-udp-microk8s-conf"
+  K8S_SKIP_TLS_VERIFY: "1"
+  AUTO_DOMAIN_NAME: "ingress-api.k8s.devflux.ru"
+  AUTO_DOMAIN_SERVICE_NAME: "ingress-manager-service"
+  AUTO_DOMAIN_SERVICE_PORT: "80"
+  AUTO_DOMAIN_NAMESPACE: "devops-tools"
+  AUTO_DOMAIN_DISABLE: "0"
+  AUTO_DOMAINS_BATCH: |
+    ingress-api.k8s.devflux.ru=ingress-manager-service:80
+    youtrack.devflux.ru=youtrack-service:web
+    minio.devflux.ru=minio-service:console
+    minio.s3.devflux.ru=minio-service:api
+    pgadmin.db.devflux.ru=pgadmin-service:web
+    phpmyadmin.db.devflux.ru=phpmyadmin-service:web
+    portfolio.sunkist.devflux.ru=portfolio-site-service:web
+    jenkins.devflux.ru=jenkins-service:web@ci-cd
+    home.devflux.ru=home-assistant-service:8123@home-assistant

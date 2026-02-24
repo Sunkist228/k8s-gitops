@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingress-manager-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-manager-l7-role
+rules:
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "patch", "create"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-manager-l7-binding
+subjects:
+- kind: ServiceAccount
+  name: ingress-manager-sa
+roleRef:
+  kind: Role
+  name: ingress-manager-l7-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-manager-l7-role-ha
+  namespace: home-assistant
+rules:
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "patch", "create", "delete"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-manager-l7-binding-ha
+  namespace: home-assistant
+subjects:
+- kind: ServiceAccount
+  name: ingress-manager-sa
+  namespace: devops-tools
+roleRef:
+  kind: Role
+  name: ingress-manager-l7-role-ha
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-manager-l4-role
+  namespace: ingress
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "patch", "create"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets"]
+  verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-manager-l4-binding
+  namespace: ingress
+subjects:
+- kind: ServiceAccount
+  name: ingress-manager-sa
+  namespace: devops-tools
+roleRef:
+  kind: Role
+  name: ingress-manager-l4-role
+  apiGroup: rbac.authorization.k8s.io

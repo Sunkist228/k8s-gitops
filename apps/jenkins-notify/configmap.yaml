@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-notify-config
+  namespace: devops-tools
+data:
+  # Настройки приложения
+  LOG_LEVEL: "INFO"

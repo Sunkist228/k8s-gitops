@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-notify
+  namespace: devops-tools
+  labels:
+    app: jenkins-notify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-notify
+  template:
+    metadata:
+      labels:
+        app: jenkins-notify
+    spec:
+      containers:
+      - name: jenkins-notify
+        image: harbor.devflux.ru/devops-tools/jenkins-notify:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-notify-secret
+              key: telegram-bot-token
+        - name: TELEGRAM_CHAT_ID
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-notify-secret
+              key: telegram-chat-id
+        - name: API_KEYS
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-notify-secret
+              key: api-keys
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: jenkins-notify-config
+              key: LOG_LEVEL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL

@@ -1,0 +1,236 @@
+# --- ServiceAccount и секрет остаются без изменений ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingress-manager-sa
+  namespace: devops-tools
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-manager-secret
+  namespace: devops-tools
+type: Opaque
+stringData:
+  API_KEY: "YOUR_SUPER_SECRET_API_KEY_HERE"
+---
+# Secret с ссылкой на строку подключения к БД
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-manager-db
+  namespace: devops-tools
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres.db.devflux.ru:5432/ingressdb"
+---
+# ConfigMap с конфигурацией Kubernetes клиента
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-manager-config
+  namespace: devops-tools
+data:
+  INGRESS_CLASS_NAME: "public"
+  CLUSTER_ISSUER_NAME: "letsencrypt-prod"
+  INGRESS_NAMESPACE: "ingress"
+  INGRESS_DAEMONSET_SELECTOR: "microk8s-application=nginx-ingress-microk8s"
+  TCP_CONFIGMAP_NAME: "nginx-ingress-tcp-microk8s-conf"
+  UDP_CONFIGMAP_NAME: "nginx-ingress-udp-microk8s-conf"
+  K8S_SKIP_TLS_VERIFY: "1"
+  AUTO_DOMAIN_NAME: "ingress-api.k8s.devflux.ru"
+  AUTO_DOMAIN_SERVICE_NAME: "ingress-manager-service"
+  AUTO_DOMAIN_SERVICE_PORT: "80"
+  AUTO_DOMAIN_NAMESPACE: "devops-tools"
+  AUTO_DOMAIN_DISABLE: "0"
+  AUTO_DOMAINS_BATCH: |
+    ingress-api.k8s.devflux.ru=ingress-manager-service:80
+    youtrack.devflux.ru=youtrack-service:web
+    minio.devflux.ru=minio-service:console
+    minio.s3.devflux.ru=minio-service:api
+    pgadmin.db.devflux.ru=pgadmin-service:web
+    phpmyadmin.db.devflux.ru=phpmyadmin-service:web
+    portfolio.sunkist.devflux.ru=portfolio-site-service:web
+    jenkins.devflux.ru=jenkins-service:web@ci-cd
+    home.devflux.ru=home-assistant-service:8123@home-assistant
+---
+# --- Роль для управления Ingress'ами в namespace 'devops-tools' ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-manager-l7-role
+  namespace: devops-tools
+rules:
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "patch", "create"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-manager-l7-binding
+  namespace: devops-tools
+subjects:
+- kind: ServiceAccount
+  name: ingress-manager-sa
+  namespace: devops-tools
+roleRef:
+  kind: Role
+  name: ingress-manager-l7-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# --- Роль для управления Ingress в namespace 'home-assistant' ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-manager-l7-role
+  namespace: home-assistant
+rules:
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "patch", "create", "delete"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-manager-l7-binding
+  namespace: home-assistant
+subjects:
+- kind: ServiceAccount
+  name: ingress-manager-sa
+  namespace: devops-tools
+roleRef:
+  kind: Role
+  name: ingress-manager-l7-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# --- НОВАЯ Роль для управления портами в namespace 'ingress' ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-manager-l4-role
+  namespace: ingress
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "patch", "create"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets"]
+  verbs: ["get", "list", "patch"]
+---
+# --- НОВАЯ Привязка роли для портов ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ingress-manager-l4-binding
+  namespace: ingress
+subjects:
+- kind: ServiceAccount
+  name: ingress-manager-sa
+  # Важно: ServiceAccount находится в другом namespace
+  namespace: devops-tools
+roleRef:
+  kind: Role
+  name: ingress-manager-l4-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-manager-api
+  namespace: devops-tools
+  labels:
+    app: ingress-manager-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingress-manager-api
+  template:
+    metadata:
+      labels:
+        app: ingress-manager-api
+    spec:
+      serviceAccountName: ingress-manager-sa
+      imagePullSecrets:
+      - name: harbor-creds
+      containers:
+      - name: api
+        image: your-repo/ingress-manager-api:latest
+        imagePullPolicy: Always
+        command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: ingress-manager-config
+        - secretRef:
+            name: ingress-manager-secret
+        - secretRef:
+            name: ingress-manager-db
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /docs
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /docs
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-manager-service
+  namespace: devops-tools
+spec:
+  selector:
+    app: ingress-manager-api
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+---
+# Ingress для доступа к API
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-manager-api-ingress
+  namespace: devops-tools
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: public
+  tls:
+  - hosts:
+    - ingress-api.k8s.devflux.ru
+    secretName: ingress-api-tls
+  rules:
+  - host: ingress-api.k8s.devflux.ru
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ingress-manager-service
+            port:
+              number: 80

@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: father-testing-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: public
+  rules:
+  - host: father-testing.demo.devflux.ru
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: father-testing-service
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - father-testing.demo.devflux.ru
+    secretName: father-testing-tls-secret

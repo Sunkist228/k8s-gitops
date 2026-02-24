@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: father-testing
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: father-testing
+  template:
+    metadata:
+      labels:
+        app: father-testing
+    spec:
+      containers:
+      - name: app
+        image: harbor.devflux.ru/demo/father-testing:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: harbor-registry-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: father-testing-service
+  namespace: demo
+spec:
+  selector:
+    app: father-testing
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: father-testing-ingress
+  namespace: demo
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: public
+  rules:
+  - host: father-testing.demo.devflux.ru
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: father-testing-service
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - father-testing.demo.devflux.ru
+    secretName: father-testing-tls-secret

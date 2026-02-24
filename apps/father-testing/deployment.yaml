@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: father-testing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: father-testing
+  template:
+    metadata:
+      labels:
+        app: father-testing
+    spec:
+      containers:
+      - name: app
+        image: harbor.devflux.ru/demo/father-testing:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+      imagePullSecrets:
+      - name: harbor-registry-secret
