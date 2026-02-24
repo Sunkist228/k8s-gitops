@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - secrets/grafana-admin-secret.yaml
   - secrets/alertmanager-telegram-secret.yaml
+  - rules/alert-smoke-test.yaml
   - servicemonitors/argocd-servicemonitors.yaml
   - dashboards/argocd-health-dashboard-cm.yaml
   - dashboards/k8s-cluster-overview-dashboard-cm.yaml
