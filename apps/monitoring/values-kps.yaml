@@ -1,5 +1,22 @@
 prometheus:
+  ingress:
+    enabled: true
+    ingressClassName: public
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - prometheus.k8s.devflux.ru
+    paths:
+      - /
+    pathType: Prefix
+    tls:
+      - secretName: prometheus-tls-secret
+        hosts:
+          - prometheus.k8s.devflux.ru
   prometheusSpec:
+    externalUrl: https://prometheus.k8s.devflux.ru
     retention: 15d
     storageSpec:
       volumeClaimTemplate:
