@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      initContainers:
+      - name: init-postgres-permissions
+        image: busybox:1.36
+        command: ["sh", "-c", "chmod 600 /etc/db-ssl/tls.key"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: db-ssl
+          mountPath: /etc/db-ssl
+          readOnly: true
+      - name: init-postgres-ssl-permissions
+        image: busybox:1.36
+        command:
+        - sh
+        - -c
+        - cp /etc/db-ssl-source/* /etc/db-ssl/ && chown 999:999 /etc/db-ssl/* && chmod 600 /etc/db-ssl/tls.key && chmod 644 /etc/db-ssl/tls.crt
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: db-ssl-source
+          mountPath: /etc/db-ssl-source
+          readOnly: true
+        - name: db-ssl-writable
+          mountPath: /etc/db-ssl
+      containers:
+      - name: postgres
+        image: postgres:16
+        args: ["-c", "ssl=on", "-c", "ssl_cert_file=/etc/db-ssl/tls.crt", "-c", "ssl_key_file=/etc/db-ssl/tls.key"]
+        ports:
+        - containerPort: 5432
+          name: postgres
+        envFrom:
+        - secretRef:
+            name: postgres-secret
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: db-ssl
+          mountPath: /etc/db-ssl
+          readOnly: true
+      volumes:
+      - name: db-ssl-source
+        secret:
+          secretName: db-ssl
+      - name: db-ssl-writable
+        emptyDir: {}
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: db-ssl
+        secret:
+          secretName: db-ssl

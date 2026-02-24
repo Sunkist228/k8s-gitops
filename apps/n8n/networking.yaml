@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n-service
+spec:
+  selector:
+    app: n8n
+  ports:
+  - port: 5678
+    targetPort: web
+    name: web
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: '0'
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+spec:
+  ingressClassName: public
+  rules:
+  - host: n8n.devflux.ru
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: n8n-service
+            port:
+              name: web
+  tls:
+  - hosts:
+    - n8n.devflux.ru
+    secretName: n8n-tls-secret

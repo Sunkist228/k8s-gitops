@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-assistant-http-config
+data:
+  trusted_proxies.sh: |
+    #!/bin/sh
+    mkdir -p /config/packages
+    CFG='/config/configuration.yaml'
+    HTTP_BLOCK='http:
+      use_x_forwarded_for: true
+      trusted_proxies:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 127.0.0.1'
+    if [ ! -f "$CFG" ]; then
+      printf 'default_config:\n\n%s\n' "$HTTP_BLOCK" > "$CFG"
+    elif ! grep -q "trusted_proxies" "$CFG" 2>/dev/null; then
+      printf '\n# Added for reverse proxy (ingress)\n%s\n' "$HTTP_BLOCK" >> "$CFG"
+    fi

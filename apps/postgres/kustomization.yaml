@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: databases
+
+resources:
+  - resources.yaml
+  - statefulset.yaml
+
+# Note: Secrets (postgres-secret, db-ssl) should be managed via sealed-secrets or external-secrets in a real setup.
+# Here we just list the resources that are present in the files.

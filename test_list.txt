@@ -1,0 +1,177 @@
+Directory: E:\local\k8s
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        07.10.2025     19:40                .cursor
+d-----        22.01.2026     23:05                .idea
+d-----        02.09.2025     18:38                actions
+d-----        24.02.2026     13:19                devops_infra
+d-----        08.01.2026     19:33                satisfactory
+d-----        14.08.2025      2:23                ssl
+-a----        22.01.2026     20:10            427 .env
+-a----        24.08.2025     19:06             14 .gitignore
+-a----        24.02.2026     13:03            724 allow_all.yaml
+-a----        22.01.2026     14:33            817 argocd-ingress.yaml
+-a----        06.09.2025      1:31           1295 ci-cd-rbac-for-deployment.yaml
+-a----        15.12.2025     20:36           4283 cleanup_pods.py
+-a----        04.09.2025     23:34            334 cluster-issuer.yaml
+-a----        24.08.2025     20:55            104 config.json
+-a----        07.02.2026      2:32          66664 create_infra.py
+-a----        24.02.2026     13:03           5842 DEPLOY.md
+-a----        03.09.2025     13:49            588 docker-compose.yaml
+-a----        22.01.2026     19:42           7884 fix_encoding.py
+-a----        16.09.2025     21:59            414 harbor-creds.yaml
+-a----        24.02.2026     13:03           2933 home-assistant.yaml
+-a----        05.09.2025     22:57            652 jenkins-agent-rbac.yaml
+-a----        24.08.2025     19:25            891 Jenkinsfile
+-a----        22.01.2026     20:10          42921 main.py
+-a----        19.08.2025     22:31           6007 n8n.yaml
+-a----        02.09.2025     18:43            294 network.yaml
+-a----        21.02.2026     19:49           2537 PLAYEROK-DEV-BOOTSTRAP.md
+-a----        15.12.2025     20:36           3014 POD_CLEANUP_REPORT.md
+-a----        24.02.2026     13:03           1200 postgres-fix-patch.json
+-a----        06.02.2026     22:45           9860 postgres-statefulset-backup.yaml
+-a----        24.02.2026     13:03           3674 README.md
+-a----        24.02.2026     13:03           4670 README.ru.md
+
+Directory: E:\local\k8s\.cursor
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        07.10.2025     19:48                rules
+-a----        07.10.2025     19:42             86 settings.json
+
+Directory: E:\local\k8s\.cursor\rules
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        22.01.2026     14:06           2511 global-mcp-usage.mdc
+
+Directory: E:\local\k8s\.idea
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        31.05.2025     19:35                inspectionProfiles
+-a----        31.05.2025     19:35            184 .gitignore
+-a----        10.09.2025     12:03            195 copilot.data.migration.agent.xml
+-a----        24.09.2025     23:55            193 copilot.data.migration.ask.xml
+-a----        24.09.2025     23:55            199 copilot.data.migration.ask2agent.xml
+-a----        10.09.2025     12:03            194 copilot.data.migration.edit.xml
+-a----        08.01.2026     18:49            305 db-forest-config.xml
+-a----        24.06.2025     20:05            325 k8s.iml
+-a----        01.06.2025      0:14            426 material_theme_project_new.xml
+-a----        24.06.2025     20:05            285 misc.xml
+-a----        31.05.2025     19:35            265 modules.xml
+-a----        31.05.2025     19:35            185 vcs.xml
+-a----        22.01.2026     23:05          39959 workspace.xml
+
+Directory: E:\local\k8s\.idea\inspectionProfiles
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        31.05.2025     19:35            174 profiles_settings.xml
+
+Directory: E:\local\k8s\actions
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        02.09.2025     18:38            434 install RAC.yaml
+
+Directory: E:\local\k8s\devops_infra
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        16.09.2025     22:08                00-namespace
+d-----        16.09.2025     22:08                01-storage
+d-----        08.01.2026     18:46                02-cluster-config
+d-----        24.02.2026     13:18                03-tools
+d-----        16.09.2025     22:08                04-networking
+d-----        04.10.2025      2:45                05-rbac
+-a----        24.02.2026     13:19           8154 apply_all.py
+-a----        02.02.2026     14:33            670 apply_cluster_config.py
+-a----        02.02.2026     14:33           3733 apply_harbor.py
+-a----        24.02.2026     13:19           3235 apply_monitoring.py
+-a----        02.02.2026     14:33            665 apply_namespaces.py
+-a----        02.02.2026     14:33           1327 apply_networking.py
+-a----        02.02.2026     14:33            660 apply_rbac.py
+-a----        02.02.2026     14:33            864 apply_storage.py
+-a----        24.02.2026     13:19           1539 apply_tools.py
+-a----        02.02.2026     14:33           6614 check_postgres.py
+-a----        16.09.2025     22:08            391 delete_all.py
+-a----        16.09.2025     22:08            798 delete_base.py
+-a----        16.09.2025     22:08            366 delete_cluster_config.py
+-a----        16.09.2025     22:08            363 delete_harbor.py
+-a----        16.09.2025     22:08            361 delete_networking.py
+-a----        16.09.2025     22:08            346 delete_rbac.py
+-a----        16.09.2025     22:08            466 delete_tools.py
+-a----        24.02.2026     13:19           2346 README.md
+-a----        02.02.2026     14:33           9059 _lib.py
+-a----        02.02.2026     14:33           7117 _patch_ingress_daemonset.py
+
+Directory: E:\local\k8s\devops_infra\00-namespace
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        24.02.2026     13:17            395 namespaces.yaml
+
+Directory: E:\local\k8s\devops_infra\01-storage
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        08.01.2026     18:46           1450 00-secrets.yaml
+-a----        24.02.2026     13:17           3315 01-persistent-volumes.yaml
+-a----        24.02.2026     13:17           3289 02-persistent-volume-claims.yaml
+-a----        16.09.2025     22:08           1217 03-image-pull-secret.yaml
+
+Directory: E:\local\k8s\devops_infra\02-cluster-config
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        08.01.2026     18:46            473 01-db-ssl-certificate.yaml
+-a----        16.09.2025     22:08            334 cluster-issuer.yaml
+
+Directory: E:\local\k8s\devops_infra\03-tools
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        16.09.2025     22:08           1263 harbor-values.yaml
+-a----        16.09.2025     22:08           2050 jenkins.yaml
+-a----        16.09.2025     22:08           1182 minio.yaml
+-a----        16.09.2025     22:08            976 mongo.yaml
+-a----        24.02.2026     13:18           1583 monitoring-values.yaml
+-a----        08.01.2026     18:46           1247 mysql.yaml
+-a----        16.09.2025     22:08            981 pgadmin.yaml
+-a----        16.09.2025     22:08            888 phpmyadmin.yaml
+-a----        16.09.2025     22:08            816 portfolio-site.yaml
+-a----        08.01.2026     18:41           1318 postgres.yaml
+-a----        16.09.2025     22:08           1110 rabbitmq.yaml
+-a----        04.10.2025      2:47           1427 youtrack-scheduler.yaml
+-a----        04.10.2025      3:26           1503 youtrack.yaml
+
+Directory: E:\local\k8s\devops_infra\04-networking
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        16.09.2025     22:08           3184 01-ingress.yaml
+-a----        16.09.2025     22:08            365 02-tcp-services-cm.yaml
+-a----        16.09.2025     22:08           1992 04-network-policy.yaml
+
+Directory: E:\local\k8s\devops_infra\05-rbac
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        16.09.2025     22:08           1211 jenkins-rbac.yaml
+-a----        04.10.2025      2:47            743 youtrack-scheduler-rbac.yaml
+
+Directory: E:\local\k8s\satisfactory
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        28.11.2025      0:29           1201 docker-compose.yaml
+
+Directory: E:\local\k8s\ssl
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        14.08.2025      2:11           1688 cert.pem
+-a----        14.08.2025      2:23           1730 key.pem
