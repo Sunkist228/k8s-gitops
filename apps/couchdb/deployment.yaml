@@ -19,9 +19,15 @@ spec:
           image: couchdb:3.3.3
           env:
             - name: COUCHDB_USER
-              value: "admin"
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-secret
+                  key: COUCHDB_USER
             - name: COUCHDB_PASSWORD
-              value: "your_strong_password"
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-secret
+                  key: COUCHDB_PASSWORD
           ports:
             - containerPort: 5984
           volumeMounts:

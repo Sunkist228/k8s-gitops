@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: databases
 
 resources:
+  - secret-externalsecret.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
