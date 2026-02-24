@@ -88,6 +88,8 @@ alertmanager:
             chat_id: 1320865933
             parse_mode: HTML
             send_resolved: true
+    templates:
+      - /etc/alertmanager/config/*.tmpl
 
 grafana:
   persistence:
