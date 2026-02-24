@@ -113,10 +113,19 @@ path "secret/data/n8n/*" {
 path "secret/data/devops-tools/*" {
   capabilities = ["read"]
 }
+path "secret/data/playerok-dev/*" {
+  capabilities = ["read"]
+}
+path "secret/data/databases/*" {
+  capabilities = ["read"]
+}
 ```
 
+Reference file in this repo:
+1. `docs/vault-policies/external-secrets-read.hcl`
+
 Apply:
-1. `vault policy write external-secrets-read <policy-file.hcl>`
+1. `vault policy write external-secrets-read docs/vault-policies/external-secrets-read.hcl`
 
 ### Step 4. Bind Vault role to ESO service account
 
@@ -143,6 +152,8 @@ Important rules:
    - `vault kv put secret/devops-tools/jenkins-notify telegram-bot-token="<BOT_TOKEN>" telegram-chat-id="<CHAT_ID>" api-keys="<CSV_API_KEYS>"`
 6. ingress-manager:
    - `vault kv put secret/devops-tools/ingress-manager API_KEY="<API_KEY>" DATABASE_URL="<DATABASE_URL>"`
+7. CouchDB:
+   - `vault kv put secret/databases/couchdb COUCHDB_USER="<COUCHDB_USER>" COUCHDB_PASSWORD="<COUCHDB_PASSWORD>"`
 
 ### Verify a secret
 
