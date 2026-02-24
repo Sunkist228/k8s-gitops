@@ -6,6 +6,7 @@ namespace: devops-tools
 resources:
 - rbac.yaml
 - config.yaml
+- secrets-externalsecret.yaml
 - deployment.yaml
 - service.yaml
 - ingress.yaml

@@ -6,6 +6,8 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
 
 - `apps/`: Individual application manifests organized by app. Each app uses Kustomize for configuration management.
   - `argocd-ingress/`: Ingress configuration for ArgoCD.
+  - `external-secrets/`: Vendored External Secrets Operator Helm chart.
+  - `external-secrets-config/`: Vault ClusterSecretStore configuration.
   - `home-assistant/`: Home Assistant deployment.
   - `n8n/`: n8n automation tool deployment.
   - `postgres/`: PostgreSQL StatefulSet and related resources.
@@ -41,7 +43,7 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
 The original manifests from `E:\local\k8s` were refactored into Kustomize-friendly structures:
 - Monolithic YAML files were split into smaller logical components (Deployment, Service, PVC, etc.).
 - Namespaces are managed via Kustomize or ArgoCD `syncOptions` (`CreateNamespace=true`).
-- Sensitive data like Secrets should be further managed using tools like Sealed Secrets or External Secrets.
+- Sensitive data is delivered from Vault via External Secrets Operator; plaintext secret values are not stored in Git.
 
 ## Ingress API Delivery Flow
 

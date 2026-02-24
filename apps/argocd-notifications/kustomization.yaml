@@ -5,4 +5,4 @@ namespace: argocd
 
 resources:
   - notifications-cm.yaml
-  - notifications-secret.yaml
+  - notifications-externalsecret.yaml

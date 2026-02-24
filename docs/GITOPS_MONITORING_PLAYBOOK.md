@@ -85,16 +85,16 @@ To prevent internal links in notifications:
 3. Ensure TLS hostnames are stable and public as required.
 
 ## Secrets Policy
-Current repo uses plain Kubernetes Secrets in Git (base64).
-Minimum rules:
-1. Keep separate bot/chat for different channels:
+Secrets must come from Vault through External Secrets Operator.
+Rules:
+1. Do not store plaintext or base64 secret values in Git.
+2. Git stores only `ExternalSecret` and `SecretStore/ClusterSecretStore` manifests.
+3. Keep separate bot/chat for different channels:
    - infra alerting
    - ArgoCD deployment notifications
-2. Rotate tokens on leakage suspicion.
-3. Never reuse CI bot token for platform-critical alerting.
-
-Recommended future improvement:
-1. Migrate to SealedSecrets or External Secrets.
+4. Rotate tokens on leakage suspicion.
+5. Never reuse CI bot token for platform-critical alerting.
+6. Populate Vault paths according to `docs/VAULT_SECRETS_BOOTSTRAP.md`.
 
 ## Change Workflow (Golden Path)
 1. Edit manifests/values in Git only.
@@ -127,7 +127,12 @@ If HashiCorp Vault is deployed in HA Raft mode:
    - `kubectl -n vault exec -it vault-0 -- vault operator unseal`
    - `kubectl -n vault exec -it vault-1 -- vault operator unseal`
    - `kubectl -n vault exec -it vault-2 -- vault operator unseal`
-5. Configure auth methods, policies, and secrets engines declaratively where possible.
+5. Enable Kubernetes auth and create role for External Secrets Operator:
+   - `vault auth enable kubernetes`
+   - configure auth backend with cluster host/CA/token-reviewer JWT
+   - create policy with read access to required KV paths
+   - create role `external-secrets` bound to service account `external-secrets` in namespace `external-secrets`
+6. Configure auth methods, policies, and secrets engines declaratively where possible.
 
 ## Common Pitfalls and Fixes
 1. CRD race conditions (ServiceMonitor/PrometheusRule apply before CRDs):

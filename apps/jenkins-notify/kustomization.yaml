@@ -5,7 +5,7 @@ namespace: devops-tools
 
 resources:
 - configmap.yaml
-- secret.yaml
+- secret-externalsecret.yaml
 - deployment.yaml
 - service.yaml
 

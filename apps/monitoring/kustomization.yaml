@@ -3,8 +3,8 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
-  - secrets/grafana-admin-secret.yaml
-  - secrets/alertmanager-telegram-secret.yaml
+  - externalsecrets/grafana-admin-externalsecret.yaml
+  - externalsecrets/alertmanager-telegram-externalsecret.yaml
   - servicemonitors/argocd-servicemonitors.yaml
   - dashboards/argocd-health-dashboard-cm.yaml
   - dashboards/k8s-cluster-overview-dashboard-cm.yaml
