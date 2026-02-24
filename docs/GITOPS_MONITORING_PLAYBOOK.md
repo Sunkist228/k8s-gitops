@@ -94,7 +94,8 @@ Rules:
    - ArgoCD deployment notifications
 4. Rotate tokens on leakage suspicion.
 5. Never reuse CI bot token for platform-critical alerting.
-6. Populate Vault paths according to `docs/VAULT_SECRETS_BOOTSTRAP.md`.
+6. Operate Vault according to `docs/VAULT_USAGE_GUIDE.md`.
+7. Populate Vault paths according to `docs/VAULT_USAGE_GUIDE.md`.
 
 ## Change Workflow (Golden Path)
 1. Edit manifests/values in Git only.

@@ -11,6 +11,7 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
   - `home-assistant/`: Home Assistant deployment.
   - `n8n/`: n8n automation tool deployment.
   - `postgres/`: PostgreSQL StatefulSet and related resources.
+  - `couchdb/`: CouchDB deployment and ingress.
   - `vault/`: Vendored HashiCorp Vault Helm chart + local values (HA Raft mode).
 - `bootstrap/`: ArgoCD "App-of-Apps" manifests for cluster initialization.
   - `root-app.yaml`: The main application that watches the `bootstrap/apps/` folder.
@@ -38,12 +39,23 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
    - Deploy the resources from `apps/<app-name>` into the cluster.
    - Synchronize any changes made to this repository.
 
+## GitOps Rule
+
+- Kubernetes app changes are made only via commits in this repository and applied by ArgoCD sync.
+- Manual mutable operations (`kubectl apply/edit` for app changes) are out of flow and should be avoided.
+- New applications must be added in both `apps/<name>/` and `bootstrap/apps/apps.yaml`.
+
 ## Refactoring Notes
 
 The original manifests from `E:\local\k8s` were refactored into Kustomize-friendly structures:
 - Monolithic YAML files were split into smaller logical components (Deployment, Service, PVC, etc.).
 - Namespaces are managed via Kustomize or ArgoCD `syncOptions` (`CreateNamespace=true`).
 - Sensitive data is delivered from Vault via External Secrets Operator; plaintext secret values are not stored in Git.
+
+## Vault Documentation
+
+1. Full operations guide: `docs/VAULT_USAGE_GUIDE.md`
+2. Bootstrap pointer: `docs/VAULT_SECRETS_BOOTSTRAP.md`
 
 ## Ingress API Delivery Flow
 

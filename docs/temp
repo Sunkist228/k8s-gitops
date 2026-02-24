@@ -1,6 +1,0 @@
-vault kv put secret/data/monitoring/alertmanager-telegram data:='{"telegram-bot-token":"8683355191:AAGA0YMkyt4vZP5oKIawzOJcgLCGVOpNPXs","telegram-chat-id":"1320865933"}'
-vault kv put secret/data/monitoring/grafana-admin data:='{"admin-user":"sunkist","admin-password":"20172010Egor"}'
-vault kv put secret/data/argocd/notifications data:='{"telegram-token":"8757840401:AAHNgk4JQivcnvtleu57qfYk9LB0YzB96pE","telegram-chat-id":"1320865933"}'
-vault kv put secret/data/n8n/auth data:='{"20172010Egor":"20172010Egor"}'
-vault kv put secret/data/devops-tools/jenkins-notify data:='{"telegram-bot-token":"6749424559:AAFkmRBtI2hmwQt7dBSJO3CM_vxW6nH1NQo","telegram-chat-id":"1320865933","api-keys":"20172010Egorchik"}'
-vault kv put secret/data/devops-tools/ingress-manager data:='{"API_KEY":"20172010Egorchik","DATABASE_URL":"postgresql+psycopg2://ingress_db-user:Eg8%23z%24tLqV2%2AbWn9%40sYp@postgres-service.databases.svc.cluster.local:5432/ingressdb"}'
