@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.telegram: |
+    token: $telegram-token
+    chatID: $telegram-chat-id
+  template.app-sync-failed: |
+    message: |
+      [ArgoCD] Sync failed
+      App: {{.app.metadata.name}}
+      Namespace: {{.app.spec.destination.namespace}}
+      Health: {{.app.status.health.status}}
+      Sync: {{.app.status.sync.status}}
+      URL: https://argo.k8s.devflux.ru/applications/{{.app.metadata.name}}
+  template.app-health-degraded: |
+    message: |
+      [ArgoCD] Health degraded
+      App: {{.app.metadata.name}}
+      Namespace: {{.app.spec.destination.namespace}}
+      Health: {{.app.status.health.status}}
+      Sync: {{.app.status.sync.status}}
+      URL: https://argo.k8s.devflux.ru/applications/{{.app.metadata.name}}
+  trigger.on-sync-failed: |
+    - description: Application sync failed
+      when: app.status.operationState != nil and app.status.operationState.phase in ['Error', 'Failed']
+      send:
+        - app-sync-failed
+  trigger.on-health-degraded: |
+    - description: Application health degraded
+      when: app.status.health.status == 'Degraded'
+      send:
+        - app-health-degraded
+  subscriptions: |
+    - recipients:
+        - telegram
+      triggers:
+        - on-sync-failed
+        - on-health-degraded
