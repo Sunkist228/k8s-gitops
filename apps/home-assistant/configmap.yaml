@@ -138,14 +138,18 @@ data:
       pc_sleep: >-
         ssh -i /config/.ssh/pc_power -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o BatchMode=yes __PC_SSH_USER__@__PC_SSH_HOST__ __PC_SLEEP_CMD__
 
-    switch:
-      - platform: wake_on_lan
-        name: "SUNKIST-PC"
-        mac: "__PC_MAC__"
-        host: "__PC_HOST__"
-        broadcast_address: "__PC_BROADCAST__"
-        turn_off:
-          action: shell_command.pc_sleep
+    template:
+      switch:
+        - name: "SUNKIST-PC"
+          unique_id: sunkist_pc
+          state: "{{ is_state('binary_sensor.sunkist_pc_online', 'on') }}"
+          turn_on:
+            service: wake_on_lan.send_magic_packet
+            data:
+              mac: "__PC_MAC__"
+              broadcast_address: "__PC_BROADCAST__"
+          turn_off:
+            service: shell_command.pc_sleep
 
     automation:
       - id: pc_wol_retry_if_still_offline
