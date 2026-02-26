@@ -22,6 +22,9 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        sysctls:
+        - name: net.ipv4.ping_group_range
+          value: "0 2147483647"
       tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
