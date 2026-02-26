@@ -54,7 +54,7 @@ spec:
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
-        image: busybox:1.36
+        image: ghcr.io/home-assistant/home-assistant:stable
         command: ["sh", "/scripts/render_pc_power.sh"]
         volumeMounts:
         - name: home-assistant-config

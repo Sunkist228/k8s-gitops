@@ -96,6 +96,53 @@ data:
     # Keep integration references on the canonical entity id.
     sed -i 's/switch\.sunkist_pc/switch.pc_power/g' "$CFG"
 
+    # Normalize stored dashboard/exposure references and remove stale template entity.
+    python3 - <<'PY'
+    import glob
+    import json
+    import os
+
+    storage_dir = "/config/.storage"
+    replace_from = "switch.sunkist_pc"
+    replace_to = "switch.pc_power"
+
+    for path in glob.glob(os.path.join(storage_dir, "lovelace*")) + [
+        os.path.join(storage_dir, "homeassistant.exposed_entities"),
+    ]:
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        updated = content.replace(replace_from, replace_to)
+        if updated != content:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(updated)
+
+    registry_path = os.path.join(storage_dir, "core.entity_registry")
+    try:
+        with open(registry_path, "r", encoding="utf-8") as f:
+            registry = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        raise SystemExit(0)
+
+    entities = registry.get("data", {}).get("entities", [])
+    filtered = []
+    changed = False
+    for entity in entities:
+        if entity.get("entity_id") == "switch.sunkist_pc" and entity.get("platform") == "template":
+            changed = True
+            continue
+        filtered.append(entity)
+
+    if changed:
+        registry.setdefault("data", {})["entities"] = filtered
+        with open(registry_path, "w", encoding="utf-8") as f:
+            json.dump(registry, f, separators=(",", ":"))
+    PY
+
     missing=0
     for key in pc_mac pc_host pc_broadcast pc_ssh_host pc_ssh_user pc_ssh_private_key pc_sleep_cmd; do
       if [ ! -s "$SECRETS_DIR/$key" ]; then
