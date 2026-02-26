@@ -14,6 +14,8 @@ spec:
       labels:
         app: home-assistant
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
@@ -44,9 +46,28 @@ spec:
         - name: config-scripts
           mountPath: /scripts
           readOnly: true
+      - name: render-pc-power-package
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        image: busybox:1.36
+        command: ["sh", "/scripts/render_pc_power.sh"]
+        volumeMounts:
+        - name: home-assistant-config
+          mountPath: /config
+        - name: config-scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: pc-power-secret
+          mountPath: /secrets
+          readOnly: true
       containers:
       - name: home-assistant
         image: ghcr.io/home-assistant/home-assistant:stable
+        securityContext:
+          capabilities:
+            add:
+            - NET_RAW
         ports:
         - containerPort: 8123
           name: web
@@ -63,3 +84,6 @@ spec:
       - name: config-scripts
         configMap:
           name: home-assistant-http-config
+      - name: pc-power-secret
+        secret:
+          secretName: home-assistant-pc-power-secret

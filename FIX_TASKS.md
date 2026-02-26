@@ -6,3 +6,5 @@
 3. **ingress-api**: висит в `ImagePullBackOff`. Проверь образ в `deployment.yaml`. Там сейчас стоит заглушка `your-repo/ingress-manager-api:latest`. Нужно заменить на реальный образ из Harbor (я видел в логах `harbor.devflux.ru/devops-tools/ingress-manager-api:17`).
 
 После правок сделай git commit и push в репозиторий.
+
+4. **Nuitka-Scons warning**: сборка выдаёт `You are not using ccache` и рекомендует установить ccache. Добавь правило в задачу по окружению/сборке — установить ccache через пакетный менеджер, чтобы ускорить комрпиляцию и избавиться от предупреждения.

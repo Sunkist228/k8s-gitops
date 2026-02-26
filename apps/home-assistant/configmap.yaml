@@ -18,3 +18,211 @@ data:
     elif ! grep -q "trusted_proxies" "$CFG" 2>/dev/null; then
       printf '\n# Added for reverse proxy (ingress)\n%s\n' "$HTTP_BLOCK" >> "$CFG"
     fi
+  render_pc_power.sh: |
+    #!/bin/sh
+    set -eu
+
+    CFG='/config/configuration.yaml'
+    PKG_DIR='/config/packages'
+    PKG_FILE="$PKG_DIR/pc_power.yaml"
+    SSH_DIR='/config/.ssh'
+    SSH_KEY="$SSH_DIR/pc_power"
+    TEMPLATE='/scripts/pc_power.package.yaml.tmpl'
+    SECRETS_DIR='/secrets'
+
+    require_secret() {
+      key="$1"
+      path="$SECRETS_DIR/$key"
+      if [ ! -s "$path" ]; then
+        echo "Missing required secret key: $key" >&2
+        exit 1
+      fi
+    }
+
+    read_secret_line() {
+      key="$1"
+      tr -d '\r\n' < "$SECRETS_DIR/$key"
+    }
+
+    sed_escape() {
+      printf '%s' "$1" | sed -e 's/[|&\\]/\\&/g'
+    }
+
+    require_secret "pc_mac"
+    require_secret "pc_host"
+    require_secret "pc_broadcast"
+    require_secret "pc_ssh_host"
+    require_secret "pc_ssh_user"
+    require_secret "pc_ssh_private_key"
+    require_secret "pc_sleep_cmd"
+
+    mkdir -p "$PKG_DIR" "$SSH_DIR"
+
+    if [ ! -f "$CFG" ]; then
+      printf 'default_config:\n\nhomeassistant:\n  packages: !include_dir_named packages\n' > "$CFG"
+    fi
+
+    if ! grep -Eq '^[[:space:]]*homeassistant:[[:space:]]*$' "$CFG"; then
+      printf '\n# Added by GitOps init\nhomeassistant:\n  packages: !include_dir_named packages\n' >> "$CFG"
+    elif ! grep -Eq '^[[:space:]]*packages:[[:space:]]*!include_dir_named[[:space:]]+packages[[:space:]]*$' "$CFG"; then
+      tmp_file="$(mktemp)"
+      awk '
+        BEGIN { inserted=0 }
+        {
+          print $0
+          if (!inserted && $0 ~ /^[[:space:]]*homeassistant:[[:space:]]*$/) {
+            print "  packages: !include_dir_named packages"
+            inserted=1
+          }
+        }
+        END {
+          if (!inserted) {
+            print ""
+            print "homeassistant:"
+            print "  packages: !include_dir_named packages"
+          }
+        }
+      ' "$CFG" > "$tmp_file"
+      mv "$tmp_file" "$CFG"
+    fi
+
+    pc_mac="$(read_secret_line pc_mac)"
+    pc_host="$(read_secret_line pc_host)"
+    pc_broadcast="$(read_secret_line pc_broadcast)"
+    pc_ssh_host="$(read_secret_line pc_ssh_host)"
+    pc_ssh_user="$(read_secret_line pc_ssh_user)"
+    pc_sleep_cmd="$(read_secret_line pc_sleep_cmd)"
+
+    sed \
+      -e "s|__PC_MAC__|$(sed_escape "$pc_mac")|g" \
+      -e "s|__PC_HOST__|$(sed_escape "$pc_host")|g" \
+      -e "s|__PC_BROADCAST__|$(sed_escape "$pc_broadcast")|g" \
+      -e "s|__PC_SSH_HOST__|$(sed_escape "$pc_ssh_host")|g" \
+      -e "s|__PC_SSH_USER__|$(sed_escape "$pc_ssh_user")|g" \
+      -e "s|__PC_SLEEP_CMD__|$(sed_escape "$pc_sleep_cmd")|g" \
+      "$TEMPLATE" > "$PKG_FILE"
+
+    cp "$SECRETS_DIR/pc_ssh_private_key" "$SSH_KEY"
+    chmod 700 "$SSH_DIR"
+    chmod 600 "$SSH_KEY"
+  pc_power.package.yaml.tmpl: |
+    wake_on_lan:
+
+    binary_sensor:
+      - platform: ping
+        name: "PC Online"
+        host: "__PC_HOST__"
+        count: 2
+        scan_interval: 30
+
+    shell_command:
+      pc_sleep: >-
+        ssh -i /config/.ssh/pc_power -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o BatchMode=yes __PC_SSH_USER__@__PC_SSH_HOST__ __PC_SLEEP_CMD__
+
+    switch:
+      - platform: wake_on_lan
+        name: "PC Power"
+        mac: "__PC_MAC__"
+        host: "__PC_HOST__"
+        broadcast_address: "__PC_BROADCAST__"
+        turn_off:
+          action: shell_command.pc_sleep
+
+    automation:
+      - id: pc_wol_retry_if_still_offline
+        alias: "PC: retry WOL if still offline"
+        mode: single
+        trigger:
+          - platform: state
+            entity_id: switch.pc_power
+            to: "on"
+        action:
+          - delay: "00:01:15"
+          - condition: state
+            entity_id: binary_sensor.pc_online
+            state: "off"
+          - action: wake_on_lan.send_magic_packet
+            data:
+              mac: "__PC_MAC__"
+              broadcast_address: "__PC_BROADCAST__"
+          - delay: "00:00:30"
+          - condition: state
+            entity_id: binary_sensor.pc_online
+            state: "off"
+          - action: persistent_notification.create
+            data:
+              title: "PC power control"
+              message: "WOL retry sent, but PC is still offline."
+              notification_id: "pc_power_wol_retry_failed"
+
+      - id: pc_status_change_notification
+        alias: "PC: status change notification"
+        mode: queued
+        trigger:
+          - platform: state
+            id: online
+            entity_id: binary_sensor.pc_online
+            from: "off"
+            to: "on"
+            for: "00:00:20"
+          - platform: state
+            id: offline
+            entity_id: binary_sensor.pc_online
+            from: "on"
+            to: "off"
+            for: "00:00:30"
+        action:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger.id == 'online' }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      title: "PC power control"
+                      message: "PC is online."
+                      notification_id: "pc_power_status"
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger.id == 'offline' }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      title: "PC power control"
+                      message: "PC is offline or sleeping."
+                      notification_id: "pc_power_status"
+
+      - id: pc_sleep_result_check
+        alias: "PC: verify sleep result"
+        mode: restart
+        trigger:
+          - platform: state
+            entity_id: switch.pc_power
+            to: "off"
+        action:
+          - delay: "00:02:00"
+          - condition: state
+            entity_id: binary_sensor.pc_online
+            state: "on"
+          - action: persistent_notification.create
+            data:
+              title: "PC power control"
+              message: "Sleep command sent, but PC is still online."
+              notification_id: "pc_power_sleep_failed"
+
+      - id: pc_night_reminder
+        alias: "PC: night reminder"
+        mode: single
+        trigger:
+          - platform: time
+            at: "00:30:00"
+        condition:
+          - condition: state
+            entity_id: binary_sensor.pc_online
+            state: "on"
+        action:
+          - action: persistent_notification.create
+            data:
+              title: "PC power control"
+              message: "PC is still online at 00:30."
+              notification_id: "pc_power_night_reminder"

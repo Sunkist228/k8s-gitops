@@ -7,5 +7,6 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - configmap.yaml
+  - pc-power-externalsecret.yaml
   - deployment.yaml
   - service.yaml
