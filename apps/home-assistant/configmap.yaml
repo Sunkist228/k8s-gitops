@@ -108,6 +108,8 @@ data:
 
     for path in glob.glob(os.path.join(storage_dir, "lovelace*")) + [
         os.path.join(storage_dir, "homeassistant.exposed_entities"),
+        os.path.join(storage_dir, "core.restore_state"),
+        os.path.join(storage_dir, "repairs.issue_registry"),
     ]:
         if not os.path.isfile(path):
             continue
