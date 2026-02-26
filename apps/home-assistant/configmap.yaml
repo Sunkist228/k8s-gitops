@@ -69,6 +69,30 @@ data:
       mv "$tmp_file" "$CFG"
     fi
 
+    # Remove legacy SUNKIST-PC template switch from root configuration to avoid duplicate entities.
+    if grep -q 'unique_id:[[:space:]]*sunkist_pc' "$CFG"; then
+      tmp_file="$(mktemp)"
+      awk '
+        BEGIN { skip=0 }
+        !skip && $0 ~ /^template:[[:space:]]*$/ { skip=1; next }
+        skip && $0 ~ /^homekit:[[:space:]]*$/ { skip=0 }
+        !skip { print }
+      ' "$CFG" > "$tmp_file"
+      mv "$tmp_file" "$CFG"
+    fi
+
+    # Remove legacy command_line binary_sensor; status is provided by package ping sensor.
+    if grep -q 'name:[[:space:]]*SUNKIST-PC online' "$CFG"; then
+      tmp_file="$(mktemp)"
+      awk '
+        BEGIN { skip=0 }
+        !skip && $0 ~ /^binary_sensor:[[:space:]]*$/ { skip=1; next }
+        skip && ($0 ~ /^# Added by GitOps init/ || $0 ~ /^homeassistant:[[:space:]]*$/) { skip=0 }
+        !skip { print }
+      ' "$CFG" > "$tmp_file"
+      mv "$tmp_file" "$CFG"
+    fi
+
     missing=0
     for key in pc_mac pc_host pc_broadcast pc_ssh_host pc_ssh_user pc_ssh_private_key pc_sleep_cmd; do
       if [ ! -s "$SECRETS_DIR/$key" ]; then
@@ -105,7 +129,7 @@ data:
 
     binary_sensor:
       - platform: ping
-        name: "PC Online"
+        name: "SUNKIST-PC online"
         host: "__PC_HOST__"
         count: 2
         scan_interval: 30
@@ -116,7 +140,7 @@ data:
 
     switch:
       - platform: wake_on_lan
-        name: "PC Power"
+        name: "SUNKIST-PC"
         mac: "__PC_MAC__"
         host: "__PC_HOST__"
         broadcast_address: "__PC_BROADCAST__"
@@ -129,12 +153,12 @@ data:
         mode: single
         trigger:
           - platform: state
-            entity_id: switch.pc_power
+            entity_id: switch.sunkist_pc
             to: "on"
         action:
           - delay: "00:01:15"
           - condition: state
-            entity_id: binary_sensor.pc_online
+            entity_id: binary_sensor.sunkist_pc_online
             state: "off"
           - action: wake_on_lan.send_magic_packet
             data:
@@ -142,7 +166,7 @@ data:
               broadcast_address: "__PC_BROADCAST__"
           - delay: "00:00:30"
           - condition: state
-            entity_id: binary_sensor.pc_online
+            entity_id: binary_sensor.sunkist_pc_online
             state: "off"
           - action: persistent_notification.create
             data:
@@ -156,13 +180,13 @@ data:
         trigger:
           - platform: state
             id: online
-            entity_id: binary_sensor.pc_online
+            entity_id: binary_sensor.sunkist_pc_online
             from: "off"
             to: "on"
             for: "00:00:20"
           - platform: state
             id: offline
-            entity_id: binary_sensor.pc_online
+            entity_id: binary_sensor.sunkist_pc_online
             from: "on"
             to: "off"
             for: "00:00:30"
@@ -192,12 +216,12 @@ data:
         mode: restart
         trigger:
           - platform: state
-            entity_id: switch.pc_power
+            entity_id: switch.sunkist_pc
             to: "off"
         action:
           - delay: "00:02:00"
           - condition: state
-            entity_id: binary_sensor.pc_online
+            entity_id: binary_sensor.sunkist_pc_online
             state: "on"
           - action: persistent_notification.create
             data:
@@ -213,7 +237,7 @@ data:
             at: "00:30:00"
         condition:
           - condition: state
-            entity_id: binary_sensor.pc_online
+            entity_id: binary_sensor.sunkist_pc_online
             state: "on"
         action:
           - action: persistent_notification.create
