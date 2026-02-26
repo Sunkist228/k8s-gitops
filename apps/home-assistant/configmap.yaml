@@ -30,15 +30,6 @@ data:
     TEMPLATE='/scripts/pc_power.package.yaml.tmpl'
     SECRETS_DIR='/secrets'
 
-    require_secret() {
-      key="$1"
-      path="$SECRETS_DIR/$key"
-      if [ ! -s "$path" ]; then
-        echo "Missing required secret key: $key" >&2
-        exit 1
-      fi
-    }
-
     read_secret_line() {
       key="$1"
       tr -d '\r\n' < "$SECRETS_DIR/$key"
@@ -47,14 +38,6 @@ data:
     sed_escape() {
       printf '%s' "$1" | sed -e 's/[|&\\]/\\&/g'
     }
-
-    require_secret "pc_mac"
-    require_secret "pc_host"
-    require_secret "pc_broadcast"
-    require_secret "pc_ssh_host"
-    require_secret "pc_ssh_user"
-    require_secret "pc_ssh_private_key"
-    require_secret "pc_sleep_cmd"
 
     mkdir -p "$PKG_DIR" "$SSH_DIR"
 
@@ -84,6 +67,18 @@ data:
         }
       ' "$CFG" > "$tmp_file"
       mv "$tmp_file" "$CFG"
+    fi
+
+    missing=0
+    for key in pc_mac pc_host pc_broadcast pc_ssh_host pc_ssh_user pc_ssh_private_key pc_sleep_cmd; do
+      if [ ! -s "$SECRETS_DIR/$key" ]; then
+        echo "pc-power secret key is missing: $key" >&2
+        missing=1
+      fi
+    done
+    if [ "$missing" -ne 0 ]; then
+      echo "pc-power secrets are not ready; skipping package rendering for this startup." >&2
+      exit 0
     fi
 
     pc_mac="$(read_secret_line pc_mac)"
