@@ -14,6 +14,8 @@ spec:
     metadata:
       labels:
         app: openclaw
+      annotations:
+        openclaw.gitops/restarted-at: "2026-02-27T20:20:00Z"
     spec:
       shareProcessNamespace: true
       initContainers:
