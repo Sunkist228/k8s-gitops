@@ -10,10 +10,13 @@ data:
 
     TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
     TOKEN_DIR="$(dirname "$TOKEN_FILE")"
+    APP_UID="${APP_UID:-1000}"
+    APP_GID="${APP_GID:-1000}"
 
     mkdir -p "$TOKEN_DIR"
 
     if [ -s "$TOKEN_FILE" ]; then
+      chown "$APP_UID:$APP_GID" "$TOKEN_FILE" 2>/dev/null || true
       chmod 600 "$TOKEN_FILE"
       exit 0
     fi
@@ -25,6 +28,7 @@ data:
     fi
 
     printf '%s' "$token" > "$TOKEN_FILE"
+    chown "$APP_UID:$APP_GID" "$TOKEN_FILE" 2>/dev/null || true
     chmod 600 "$TOKEN_FILE"
   proxy-sync.py: |
     #!/usr/bin/env python3

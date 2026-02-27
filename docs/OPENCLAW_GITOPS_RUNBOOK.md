@@ -15,6 +15,25 @@ Write VPN subscription URL to Vault:
 vault kv put secret/openclaw/proxy subscription_url="https://example.com/api/v1/client/subscribe?token=..."
 ```
 
+If you use Vault Web REPL, KV v2 `kv put` is not supported there. Use one of:
+
+1. Vault UI Secrets form:
+   - Open mount `secret/`
+   - Create secret path `openclaw/proxy`
+   - Add key `subscription_url`
+2. Vault API explorer from Web REPL:
+   - Run `api`
+   - Execute `POST /secret/data/{path}` with `path=openclaw/proxy`
+   - JSON body:
+
+```json
+{
+  "data": {
+    "subscription_url": "https://example.com/api/v1/client/subscribe?token=..."
+  }
+}
+```
+
 Vault policy reminder for ESO role:
 
 - Grant `read` access to `secret/data/openclaw/*`.

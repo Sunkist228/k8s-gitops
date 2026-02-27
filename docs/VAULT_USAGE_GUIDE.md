@@ -220,7 +220,19 @@ Cause:
 1. REPL parser issues with inline JSON format.
 
 Fix:
-1. Use Vault CLI (`vault kv put`) inside `vault-0` pod.
+1. Preferred: use Vault CLI (`vault kv put`) inside `vault-0` pod.
+2. Alternative in Vault UI: use API explorer instead of Web REPL `kv put`:
+   - endpoint: `POST /secret/data/{path}`
+   - path: `openclaw/proxy` (or your target path)
+   - body:
+
+```json
+{
+  "data": {
+    "subscription_url": "https://example.com/api/v1/client/subscribe?token=..."
+  }
+}
+```
 
 ### Error: `403 preflight capability check returned 403`
 
