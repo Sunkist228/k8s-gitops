@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw
+  namespace: openclaw
+  labels:
+    app: openclaw
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openclaw
+  template:
+    metadata:
+      labels:
+        app: openclaw
+    spec:
+      shareProcessNamespace: true
+      initContainers:
+        - name: gateway-token-init
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - /opt/scripts/init-gateway-token.sh
+          volumeMounts:
+            - name: openclaw-data
+              mountPath: /home/node/.openclaw
+            - name: scripts
+              mountPath: /opt/scripts
+      containers:
+        - name: openclaw
+          image: ghcr.io/openclaw/openclaw:2026.2.26
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
+              if [ ! -s "$TOKEN_FILE" ]; then
+                echo "missing gateway token at $TOKEN_FILE" >&2
+                exit 1
+              fi
+              TOKEN_FROM_FILE="$(cat "$TOKEN_FILE")"
+              exec node dist/index.js gateway --bind loopback --port 18789 --token "$TOKEN_FROM_FILE"
+          env:
+            - name: HTTP_PROXY
+              value: http://127.0.0.1:7890
+            - name: HTTPS_PROXY
+              value: http://127.0.0.1:7890
+            - name: ALL_PROXY
+              value: socks5://127.0.0.1:7891
+            - name: NO_PROXY
+              value: 127.0.0.1,localhost,.svc,.cluster.local
+          ports:
+            - name: gateway
+              containerPort: 18789
+          volumeMounts:
+            - name: openclaw-data
+              mountPath: /home/node/.openclaw
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
+                  [ -s "$TOKEN_FILE" ] && node dist/index.js health --token "$(cat "$TOKEN_FILE")" >/dev/null
+            failureThreshold: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
+                  [ -s "$TOKEN_FILE" ] && node dist/index.js health --token "$(cat "$TOKEN_FILE")" >/dev/null
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
+                  [ -s "$TOKEN_FILE" ] && node dist/index.js health --token "$(cat "$TOKEN_FILE")" >/dev/null
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+        - name: mihomo
+          image: metacubex/mihomo:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              CONFIG="/shared/mihomo/config.yaml"
+              while [ ! -s "$CONFIG" ]; do
+                echo "[mihomo] waiting for $CONFIG"
+                sleep 2
+              done
+              if command -v mihomo >/dev/null 2>&1; then
+                exec mihomo -f "$CONFIG"
+              fi
+              exec /mihomo -f "$CONFIG"
+          ports:
+            - name: http-proxy
+              containerPort: 7890
+            - name: socks-proxy
+              containerPort: 7891
+          volumeMounts:
+            - name: shared-mihomo
+              mountPath: /shared/mihomo
+        - name: subconverter
+          image: tindy2013/subconverter:latest
+          ports:
+            - name: subconverter
+              containerPort: 25500
+        - name: proxy-sync
+          image: python:3.12-alpine
+          command:
+            - python
+            - /opt/scripts/proxy-sync.py
+          env:
+            - name: SUBSCRIPTION_URL
+              valueFrom:
+                secretKeyRef:
+                  name: openclaw-vpn-subscription
+                  key: subscription_url
+          volumeMounts:
+            - name: shared-mihomo
+              mountPath: /shared/mihomo
+            - name: scripts
+              mountPath: /opt/scripts
+      volumes:
+        - name: openclaw-data
+          persistentVolumeClaim:
+            claimName: openclaw-data
+        - name: shared-mihomo
+          emptyDir: {}
+        - name: scripts
+          configMap:
+            name: openclaw-scripts
+            defaultMode: 0555

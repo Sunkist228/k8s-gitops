@@ -1,0 +1,287 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-scripts
+  namespace: openclaw
+data:
+  init-gateway-token.sh: |
+    #!/bin/sh
+    set -eu
+
+    TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
+    TOKEN_DIR="$(dirname "$TOKEN_FILE")"
+
+    mkdir -p "$TOKEN_DIR"
+
+    if [ -s "$TOKEN_FILE" ]; then
+      chmod 600 "$TOKEN_FILE"
+      exit 0
+    fi
+
+    if command -v openssl >/dev/null 2>&1; then
+      token="$(openssl rand -hex 32)"
+    else
+      token="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+    fi
+
+    printf '%s' "$token" > "$TOKEN_FILE"
+    chmod 600 "$TOKEN_FILE"
+  proxy-sync.py: |
+    #!/usr/bin/env python3
+    import hashlib
+    import os
+    import re
+    import signal
+    import time
+    from pathlib import Path
+    from urllib.parse import quote
+    from urllib.request import Request, urlopen
+
+    SUBSCRIPTION_URL = os.environ.get("SUBSCRIPTION_URL", "").strip()
+    CONVERTER_URL = "http://127.0.0.1:25500/sub"
+    OUTPUT_PATH = Path("/shared/mihomo/config.yaml")
+    GROUP_NAME = "OpenAI-Group"
+    REFRESH_SECONDS = 21600
+    FAILURE_RETRY_SECONDS = 60
+
+
+    def log(message: str) -> None:
+        print(f"[proxy-sync] {message}", flush=True)
+
+
+    def fetch_converted_clash_config(subscription_url: str) -> str:
+        encoded_url = quote(subscription_url, safe="")
+        request_url = f"{CONVERTER_URL}?target=clash&url={encoded_url}"
+        request = Request(request_url, headers={"User-Agent": "openclaw-proxy-sync/1.0"})
+
+        with urlopen(request, timeout=60) as response:
+            content = response.read().decode("utf-8", errors="replace")
+
+        if not content.strip():
+            raise RuntimeError("subconverter returned an empty response")
+
+        return content
+
+
+    def normalize_scalar(value: str) -> str:
+        text = value.strip()
+        if not text:
+            return ""
+
+        if text[0] in ('"', "'"):
+            quote_char = text[0]
+            if len(text) >= 2 and text[-1] == quote_char:
+                return text[1:-1]
+            return text[1:]
+
+        if " #" in text:
+            text = text.split(" #", 1)[0].rstrip()
+
+        return text
+
+
+    def split_proxy_items(proxy_lines):
+        items = []
+        current = []
+
+        for line in proxy_lines:
+            if line.startswith("  - "):
+                if current:
+                    items.append(current)
+                current = [line]
+                continue
+
+            if current:
+                current.append(line)
+
+        if current:
+            items.append(current)
+
+        return items
+
+
+    def extract_name_from_item(item_lines) -> str:
+        first_line = item_lines[0].strip()
+
+        match = re.match(r"^-\s*name\s*:\s*(.+)$", first_line)
+        if match:
+            return normalize_scalar(match.group(1))
+
+        if first_line.startswith("- {"):
+            inline_match = re.search(r"\bname\s*:\s*([^,}]+)", first_line)
+            if inline_match:
+                return normalize_scalar(inline_match.group(1))
+
+        for line in item_lines[1:]:
+            match = re.match(r"^\s*name\s*:\s*(.+)$", line)
+            if match:
+                return normalize_scalar(match.group(1))
+
+        return ""
+
+
+    def extract_proxies_block_and_names(clash_yaml_text: str):
+        lines = clash_yaml_text.splitlines()
+        proxy_start = -1
+
+        for index, line in enumerate(lines):
+            if line.strip() == "proxies:":
+                proxy_start = index
+                break
+
+        if proxy_start == -1:
+            raise RuntimeError("no top-level 'proxies:' section found in converter output")
+
+        proxy_lines = []
+        for line in lines[proxy_start + 1 :]:
+            if line.startswith(" ") or line.startswith("\t") or not line.strip():
+                proxy_lines.append(line)
+                continue
+            break
+
+        while proxy_lines and not proxy_lines[-1].strip():
+            proxy_lines.pop()
+
+        if not proxy_lines:
+            raise RuntimeError("converter returned an empty 'proxies:' block")
+
+        proxy_items = split_proxy_items(proxy_lines)
+        if not proxy_items:
+            raise RuntimeError("unable to parse proxy items from converter output")
+
+        proxy_names = []
+        for item in proxy_items:
+            name = extract_name_from_item(item)
+            if name:
+                proxy_names.append(name)
+
+        if not proxy_names:
+            raise RuntimeError("unable to extract proxy names from converter output")
+
+        proxy_block = "\n".join(proxy_lines) + "\n"
+        return proxy_block, proxy_names
+
+
+    def yaml_quote(value: str) -> str:
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+
+
+    def build_mihomo_config(proxy_block: str, proxy_names) -> str:
+        proxy_group_entries = "\n".join(f"      - {yaml_quote(name)}" for name in proxy_names)
+
+        return (
+            "port: 7890\n"
+            "socks-port: 7891\n"
+            "allow-lan: true\n"
+            "mode: rule\n"
+            "log-level: info\n"
+            "proxies:\n"
+            f"{proxy_block}"
+            "proxy-groups:\n"
+            f"  - name: {GROUP_NAME}\n"
+            "    type: url-test\n"
+            "    proxies:\n"
+            f"{proxy_group_entries}\n"
+            "    url: http://www.gstatic.com/generate_204\n"
+            "    interval: 300\n"
+            "rules:\n"
+            f"  - DOMAIN-SUFFIX,openai.com,{GROUP_NAME}\n"
+            f"  - DOMAIN-SUFFIX,anthropic.com,{GROUP_NAME}\n"
+            "  - GEOIP,CN,DIRECT\n"
+            f"  - MATCH,{GROUP_NAME}\n"
+        )
+
+
+    def sha256_text(content: str) -> str:
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+    def read_existing_hash(path: Path):
+        if not path.exists():
+            return None
+        return sha256_text(path.read_text(encoding="utf-8"))
+
+
+    def write_atomic(path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_suffix(path.suffix + ".tmp")
+        temp_path.write_text(content, encoding="utf-8")
+        os.replace(temp_path, path)
+
+
+    def find_mihomo_pids():
+        pids = set()
+        proc_root = Path("/proc")
+
+        for entry in proc_root.iterdir():
+            if not entry.name.isdigit():
+                continue
+
+            try:
+                comm = (entry / "comm").read_text(encoding="utf-8").strip().lower()
+                if "mihomo" in comm:
+                    pids.add(int(entry.name))
+                    continue
+
+                cmdline_raw = (entry / "cmdline").read_bytes()
+                cmdline = cmdline_raw.replace(b"\x00", b" ").decode("utf-8", errors="ignore").lower()
+                if "mihomo" in cmdline:
+                    pids.add(int(entry.name))
+            except OSError:
+                continue
+
+        return sorted(pids)
+
+
+    def reload_mihomo() -> None:
+        pids = find_mihomo_pids()
+        if not pids:
+            log("mihomo process not found yet; config written without reload signal")
+            return
+
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGHUP)
+                log(f"sent SIGHUP to mihomo process pid={pid}")
+            except ProcessLookupError:
+                continue
+
+
+    def sync_once() -> bool:
+        converted_yaml = fetch_converted_clash_config(SUBSCRIPTION_URL)
+        proxy_block, proxy_names = extract_proxies_block_and_names(converted_yaml)
+        final_config = build_mihomo_config(proxy_block, proxy_names)
+
+        new_hash = sha256_text(final_config)
+        old_hash = read_existing_hash(OUTPUT_PATH)
+
+        if old_hash == new_hash:
+            log("config unchanged; skipping write")
+            return False
+
+        write_atomic(OUTPUT_PATH, final_config)
+        log(f"config updated with {len(proxy_names)} proxies")
+        reload_mihomo()
+        return True
+
+
+    def main() -> int:
+        if not SUBSCRIPTION_URL:
+            log("SUBSCRIPTION_URL is empty; cannot continue")
+            return 1
+
+        log("starting proxy sync loop")
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        while True:
+            try:
+                sync_once()
+                time.sleep(REFRESH_SECONDS)
+            except Exception as error:  # noqa: BLE001
+                log(f"sync failed: {error}")
+                time.sleep(FAILURE_RETRY_SECONDS)
+
+
+    if __name__ == "__main__":
+        raise SystemExit(main())
