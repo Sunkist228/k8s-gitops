@@ -119,6 +119,9 @@ path "secret/data/playerok-dev/*" {
 path "secret/data/databases/*" {
   capabilities = ["read"]
 }
+path "secret/data/openclaw/*" {
+  capabilities = ["read"]
+}
 ```
 
 Reference file in this repo:
@@ -154,6 +157,8 @@ Important rules:
    - `vault kv put secret/devops-tools/ingress-manager API_KEY="<API_KEY>" DATABASE_URL="<DATABASE_URL>"`
 7. CouchDB:
    - `vault kv put secret/databases/couchdb COUCHDB_USER="<COUCHDB_USER>" COUCHDB_PASSWORD="<COUCHDB_PASSWORD>"`
+8. OpenClaw VPN subscription:
+   - `vault kv put secret/openclaw/proxy subscription_url="<SUBSCRIPTION_URL>"`
 
 ### Verify a secret
 
@@ -186,6 +191,7 @@ For env-based secrets, restart workloads to consume new values:
 4. `kubectl -n n8n rollout restart deployment n8n`
 5. `kubectl -n devops-tools rollout restart deployment jenkins-notify`
 6. `kubectl -n devops-tools rollout restart deployment ingress-manager-api`
+7. `kubectl -n openclaw rollout restart deployment openclaw`
 
 ## Common Errors and Fixes
 
@@ -224,6 +230,12 @@ Cause:
 Fix:
 1. Login with root/admin token.
 2. Update policy for required capabilities.
+3. Re-apply policy from repo:
+   - `vault policy write external-secrets-read docs/vault-policies/external-secrets-read.hcl`
+4. Re-ensure role binding (if changed):
+   - `vault write auth/kubernetes/role/external-secrets bound_service_account_names=external-secrets bound_service_account_namespaces=external-secrets policies=external-secrets-read ttl=1h`
+5. Force ESO sync:
+   - `kubectl -n <ns> annotate externalsecret <name> force-sync="$(date -Iseconds)" --overwrite`
 
 ### Pods pending with anti-affinity on single-node
 

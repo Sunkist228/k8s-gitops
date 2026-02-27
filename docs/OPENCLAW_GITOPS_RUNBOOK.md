@@ -26,6 +26,24 @@ path "secret/data/openclaw/*" {
 }
 ```
 
+Apply policy from this repo:
+
+```bash
+vault policy write external-secrets-read docs/vault-policies/external-secrets-read.hcl
+```
+
+Ensure ESO role still uses this policy:
+
+```bash
+vault write auth/kubernetes/role/external-secrets bound_service_account_names=external-secrets bound_service_account_namespaces=external-secrets policies=external-secrets-read ttl=1h
+```
+
+If `ExternalSecret/openclaw-vpn-subscription` shows `403 permission denied`, force reconcile after policy update:
+
+```bash
+kubectl -n openclaw annotate externalsecret openclaw-vpn-subscription force-sync="$(date -Iseconds)" --overwrite
+```
+
 ## GitOps Sync
 
 1. Commit changes under `apps/openclaw` and `bootstrap/apps/apps.yaml`.
