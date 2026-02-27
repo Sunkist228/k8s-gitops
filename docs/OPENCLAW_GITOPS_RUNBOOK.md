@@ -102,7 +102,7 @@ kubectl -n openclaw exec deploy/openclaw -c openclaw -- cat /home/node/.openclaw
 
 1. `ExternalSecret/openclaw-vpn-subscription` is `Ready=True`.
 2. Secret `openclaw-vpn-subscription` exists.
-3. `proxy-sync` logs show successful fetch from `subconverter`.
+3. `proxy-sync` logs show successful fetch and config render from Vault subscription.
 4. `/shared/mihomo/config.yaml` is present in pod.
 5. `mihomo` listens on internal ports `7890/7891`.
 6. `openclaw` health probe succeeds.

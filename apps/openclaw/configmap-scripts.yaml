@@ -42,17 +42,25 @@ data:
     import re
     import signal
     import time
-    from urllib.error import HTTPError, URLError
     from pathlib import Path
-    from urllib.parse import parse_qs, quote, unquote, urlparse
+    from urllib.parse import parse_qs, unquote, urlparse
     from urllib.request import Request, urlopen
 
-    CONVERTER_URL = "http://127.0.0.1:25500/sub"
     OUTPUT_PATH = Path("/shared/mihomo/config.yaml")
     SUBSCRIPTION_FILE = Path(os.environ.get("SUBSCRIPTION_URL_FILE", "/vault-secrets/subscription_url"))
     GROUP_NAME = "OpenAI-Group"
     REFRESH_SECONDS = 21600
     FAILURE_RETRY_SECONDS = 60
+    RU_MARKERS = (
+        "🇷🇺",
+        "russia",
+        "russian",
+        "moscow",
+        "росси",
+        "москва",
+        "питер",
+        "санкт",
+    )
 
 
     def log(message: str) -> None:
@@ -73,20 +81,6 @@ data:
             raw = SUBSCRIPTION_FILE.read_text(encoding="utf-8", errors="replace")
             return sanitize_subscription_url(raw)
         return sanitize_subscription_url(os.environ.get("SUBSCRIPTION_URL", ""))
-
-
-    def fetch_converted_clash_config(subscription_url: str) -> str:
-        encoded_url = quote(subscription_url, safe="")
-        request_url = f"{CONVERTER_URL}?target=clash&url={encoded_url}"
-        request = Request(request_url, headers={"User-Agent": "openclaw-proxy-sync/1.0"})
-
-        with urlopen(request, timeout=60) as response:
-            content = response.read().decode("utf-8", errors="replace")
-
-        if not content.strip():
-            raise RuntimeError("subconverter returned an empty response")
-
-        return content
 
 
     def fetch_direct_subscription(subscription_url: str) -> str:
@@ -112,6 +106,24 @@ data:
     def yaml_quote(value: str) -> str:
         escaped = value.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
+
+
+    def is_russian_proxy(name: str, server: str) -> bool:
+        name_text = (name or "").lower()
+        server_text = (server or "").lower()
+        combined = f"{name_text} {server_text}"
+
+        if any(marker in combined for marker in RU_MARKERS):
+            return True
+
+        # Common country code markers in labels/domains.
+        if re.search(r"(^|[^a-z0-9])ru([^a-z0-9]|$)", combined):
+            return True
+
+        if server_text.startswith("ru.") or ".ru." in server_text or server_text.endswith(".ru"):
+            return True
+
+        return False
 
 
     def build_vless_proxy_item(link: str):
@@ -170,6 +182,9 @@ data:
                     item.append(f"      short-id: {yaml_quote(sid)}")
             if fp:
                 item.append(f"    client-fingerprint: {yaml_quote(fp)}")
+
+        if is_russian_proxy(name, server):
+            return None
 
         return item, name
 
@@ -251,6 +266,22 @@ data:
         return ""
 
 
+    def extract_server_from_item(item_lines) -> str:
+        first_line = item_lines[0].strip()
+
+        if first_line.startswith("- {"):
+            inline_match = re.search(r"\bserver\s*:\s*([^,}]+)", first_line)
+            if inline_match:
+                return normalize_scalar(inline_match.group(1))
+
+        for line in item_lines[1:]:
+            match = re.match(r"^\s*server\s*:\s*(.+)$", line)
+            if match:
+                return normalize_scalar(match.group(1))
+
+        return ""
+
+
     def extract_proxies_block_and_names(clash_yaml_text: str):
         lines = clash_yaml_text.splitlines()
         proxy_start = -1
@@ -280,16 +311,25 @@ data:
         if not proxy_items:
             raise RuntimeError("unable to parse proxy items from converter output")
 
+        filtered_items = []
         proxy_names = []
         for item in proxy_items:
             name = extract_name_from_item(item)
-            if name:
-                proxy_names.append(name)
+            server = extract_server_from_item(item)
+            if not name:
+                continue
+            if is_russian_proxy(name, server):
+                continue
+            filtered_items.append(item)
+            proxy_names.append(name)
 
         if not proxy_names:
-            raise RuntimeError("unable to extract proxy names from converter output")
+            raise RuntimeError("no non-RU proxies found in converter output")
 
-        proxy_block = "\n".join(proxy_lines) + "\n"
+        rendered = []
+        for item in filtered_items:
+            rendered.extend(item)
+        proxy_block = "\n".join(rendered) + "\n"
         return proxy_block, proxy_names
 
 
@@ -375,17 +415,12 @@ data:
 
 
     def sync_once(subscription_url: str) -> bool:
+        raw_content = fetch_direct_subscription(subscription_url)
         try:
-            converted_yaml = fetch_converted_clash_config(subscription_url)
-            proxy_block, proxy_names = extract_proxies_block_and_names(converted_yaml)
-        except (HTTPError, URLError, RuntimeError) as error:
-            log(f"subconverter failed ({error}); trying direct subscription fetch")
-            raw_content = fetch_direct_subscription(subscription_url)
-            try:
-                proxy_block, proxy_names = extract_proxies_block_and_names(raw_content)
-            except RuntimeError:
-                log("direct payload is not clash yaml; trying base64 vless parser")
-                proxy_block, proxy_names = parse_vless_subscription(raw_content)
+            proxy_block, proxy_names = extract_proxies_block_and_names(raw_content)
+        except RuntimeError:
+            log("direct payload is not clash yaml; trying base64 vless parser")
+            proxy_block, proxy_names = parse_vless_subscription(raw_content)
 
         final_config = build_mihomo_config(proxy_block, proxy_names)
 
