@@ -8,16 +8,20 @@ data:
     #!/bin/sh
     set -eu
 
+    OPENCLAW_DIR="/home/node/.openclaw"
+    BOOTSTRAP_DIR="$OPENCLAW_DIR/bootstrap"
     TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
     TOKEN_DIR="$(dirname "$TOKEN_FILE")"
     APP_UID="${APP_UID:-1000}"
     APP_GID="${APP_GID:-1000}"
 
     mkdir -p "$TOKEN_DIR"
+    chmod 755 "$OPENCLAW_DIR" "$BOOTSTRAP_DIR" 2>/dev/null || true
+    chown "$APP_UID:$APP_GID" "$OPENCLAW_DIR" "$BOOTSTRAP_DIR" 2>/dev/null || true
 
     if [ -s "$TOKEN_FILE" ]; then
       chown "$APP_UID:$APP_GID" "$TOKEN_FILE" 2>/dev/null || true
-      chmod 600 "$TOKEN_FILE"
+      chmod 644 "$TOKEN_FILE" 2>/dev/null || true
       exit 0
     fi
 
@@ -29,7 +33,7 @@ data:
 
     printf '%s' "$token" > "$TOKEN_FILE"
     chown "$APP_UID:$APP_GID" "$TOKEN_FILE" 2>/dev/null || true
-    chmod 600 "$TOKEN_FILE"
+    chmod 644 "$TOKEN_FILE" 2>/dev/null || true
   proxy-sync.py: |
     #!/usr/bin/env python3
     import hashlib
