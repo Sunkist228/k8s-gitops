@@ -38,12 +38,13 @@ data:
     #!/usr/bin/env python3
     import base64
     import hashlib
+    import json
     import os
     import re
     import signal
     import time
     from pathlib import Path
-    from urllib.parse import parse_qs, unquote, urlparse
+    from urllib.parse import parse_qs, quote, unquote, urlparse
     from urllib.request import Request, urlopen
 
     OUTPUT_PATH = Path("/shared/mihomo/config.yaml")
@@ -61,6 +62,10 @@ data:
         "питер",
         "санкт",
     )
+    CONTROLLER_URL = "http://127.0.0.1:9090"
+    OPENAI_CHECK_URL = "https://api.openai.com/v1/models"
+    PROXY_CHECK_TIMEOUT_MS = 8000
+    CONTROLLER_WAIT_SECONDS = 15
 
 
     def log(message: str) -> None:
@@ -342,6 +347,7 @@ data:
             "allow-lan: true\n"
             "mode: rule\n"
             "log-level: info\n"
+            "external-controller: 127.0.0.1:9090\n"
             "proxies:\n"
             f"{proxy_block}"
             "proxy-groups:\n"
@@ -414,6 +420,59 @@ data:
                 continue
 
 
+    def wait_for_controller_ready(timeout_seconds: int = CONTROLLER_WAIT_SECONDS) -> bool:
+        deadline = time.time() + timeout_seconds
+        request = Request(f"{CONTROLLER_URL}/version")
+        while time.time() < deadline:
+            try:
+                with urlopen(request, timeout=2):
+                    return True
+            except Exception:  # noqa: BLE001
+                time.sleep(0.5)
+        return False
+
+
+    def is_openai_reachable_via_proxy(proxy_name: str) -> bool:
+        encoded_name = quote(proxy_name, safe="")
+        encoded_url = quote(OPENAI_CHECK_URL, safe="")
+        request_url = (
+            f"{CONTROLLER_URL}/proxies/{encoded_name}/delay"
+            f"?url={encoded_url}&timeout={PROXY_CHECK_TIMEOUT_MS}"
+        )
+        request = Request(request_url, headers={"User-Agent": "openclaw-proxy-sync/1.0"})
+
+        try:
+            with urlopen(request, timeout=12) as response:
+                payload = json.loads(response.read().decode("utf-8", errors="replace"))
+            delay = int(payload.get("delay", 0))
+            return delay > 0
+        except Exception:  # noqa: BLE001
+            return False
+
+
+    def filter_openai_reachable_proxies(proxy_names):
+        if not proxy_names:
+            return []
+        if not wait_for_controller_ready():
+            log("mihomo controller not ready; skipping OpenAI reachability filter")
+            return proxy_names
+
+        allowed = []
+        for name in proxy_names:
+            if is_openai_reachable_via_proxy(name):
+                allowed.append(name)
+
+        if not allowed:
+            log("no proxies passed OpenAI reachability check; keeping unfiltered set")
+            return proxy_names
+
+        if len(allowed) != len(proxy_names):
+            log(f"OpenAI reachability filter kept {len(allowed)}/{len(proxy_names)} proxies")
+        else:
+            log(f"OpenAI reachability filter kept all {len(proxy_names)} proxies")
+        return allowed
+
+
     def sync_once(subscription_url: str) -> bool:
         raw_content = fetch_direct_subscription(subscription_url)
         try:
@@ -422,17 +481,32 @@ data:
             log("direct payload is not clash yaml; trying base64 vless parser")
             proxy_block, proxy_names = parse_vless_subscription(raw_content)
 
-        final_config = build_mihomo_config(proxy_block, proxy_names)
+        initial_config = build_mihomo_config(proxy_block, proxy_names)
 
-        new_hash = sha256_text(final_config)
+        new_hash = sha256_text(initial_config)
         old_hash = read_existing_hash(OUTPUT_PATH)
+        config_changed = False
 
         if old_hash == new_hash:
             log("config unchanged; skipping write")
-            return False
+        else:
+            write_atomic(OUTPUT_PATH, initial_config)
+            log(f"config updated with {len(proxy_names)} proxies")
+            reload_mihomo()
+            config_changed = True
 
-        write_atomic(OUTPUT_PATH, final_config)
-        log(f"config updated with {len(proxy_names)} proxies")
+        filtered_proxy_names = filter_openai_reachable_proxies(proxy_names)
+        if filtered_proxy_names == proxy_names:
+            return config_changed
+
+        filtered_config = build_mihomo_config(proxy_block, filtered_proxy_names)
+        filtered_hash = sha256_text(filtered_config)
+        current_hash = read_existing_hash(OUTPUT_PATH)
+        if current_hash == filtered_hash:
+            return config_changed
+
+        write_atomic(OUTPUT_PATH, filtered_config)
+        log(f"config updated with OpenAI-reachable proxies: {len(filtered_proxy_names)}")
         reload_mihomo()
         return True
 
