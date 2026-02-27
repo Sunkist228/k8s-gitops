@@ -45,9 +45,9 @@ data:
     from urllib.parse import quote
     from urllib.request import Request, urlopen
 
-    SUBSCRIPTION_URL = os.environ.get("SUBSCRIPTION_URL", "").strip()
     CONVERTER_URL = "http://127.0.0.1:25500/sub"
     OUTPUT_PATH = Path("/shared/mihomo/config.yaml")
+    SUBSCRIPTION_FILE = Path(os.environ.get("SUBSCRIPTION_URL_FILE", "/vault-secrets/subscription_url"))
     GROUP_NAME = "OpenAI-Group"
     REFRESH_SECONDS = 21600
     FAILURE_RETRY_SECONDS = 60
@@ -55,6 +55,22 @@ data:
 
     def log(message: str) -> None:
         print(f"[proxy-sync] {message}", flush=True)
+
+
+    def sanitize_subscription_url(value: str) -> str:
+        text = value.strip()
+        if not text:
+            return ""
+        if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+            text = text[1:-1].strip()
+        return text
+
+
+    def read_subscription_url() -> str:
+        if SUBSCRIPTION_FILE.exists():
+            raw = SUBSCRIPTION_FILE.read_text(encoding="utf-8", errors="replace")
+            return sanitize_subscription_url(raw)
+        return sanitize_subscription_url(os.environ.get("SUBSCRIPTION_URL", ""))
 
 
     def fetch_converted_clash_config(subscription_url: str) -> str:
@@ -256,8 +272,8 @@ data:
                 continue
 
 
-    def sync_once() -> bool:
-        converted_yaml = fetch_converted_clash_config(SUBSCRIPTION_URL)
+    def sync_once(subscription_url: str) -> bool:
+        converted_yaml = fetch_converted_clash_config(subscription_url)
         proxy_block, proxy_names = extract_proxies_block_and_names(converted_yaml)
         final_config = build_mihomo_config(proxy_block, proxy_names)
 
@@ -275,16 +291,17 @@ data:
 
 
     def main() -> int:
-        if not SUBSCRIPTION_URL:
-            log("SUBSCRIPTION_URL is empty; cannot continue")
-            return 1
-
         log("starting proxy sync loop")
         OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
         while True:
             try:
-                sync_once()
+                subscription_url = read_subscription_url()
+                if not subscription_url:
+                    raise RuntimeError(
+                        f"subscription URL is empty; expected secret file at {SUBSCRIPTION_FILE}"
+                    )
+                sync_once(subscription_url)
                 time.sleep(REFRESH_SECONDS)
             except Exception as error:  # noqa: BLE001
                 log(f"sync failed: {error}")

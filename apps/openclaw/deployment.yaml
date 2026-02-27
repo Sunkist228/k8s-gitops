@@ -15,7 +15,7 @@ spec:
       labels:
         app: openclaw
       annotations:
-        openclaw.gitops/restarted-at: "2026-02-27T20:20:00Z"
+        openclaw.gitops/restarted-at: "2026-02-27T20:35:00Z"
     spec:
       shareProcessNamespace: true
       initContainers:
@@ -127,16 +127,16 @@ spec:
             - python
             - /opt/scripts/proxy-sync.py
           env:
-            - name: SUBSCRIPTION_URL
-              valueFrom:
-                secretKeyRef:
-                  name: openclaw-vpn-subscription
-                  key: subscription_url
+            - name: SUBSCRIPTION_URL_FILE
+              value: /vault-secrets/subscription_url
           volumeMounts:
             - name: shared-mihomo
               mountPath: /shared/mihomo
             - name: scripts
               mountPath: /opt/scripts
+            - name: vpn-subscription
+              mountPath: /vault-secrets
+              readOnly: true
       volumes:
         - name: openclaw-data
           persistentVolumeClaim:
@@ -147,3 +147,7 @@ spec:
           configMap:
             name: openclaw-scripts
             defaultMode: 0555
+        - name: vpn-subscription
+          secret:
+            secretName: openclaw-vpn-subscription
+            optional: true
