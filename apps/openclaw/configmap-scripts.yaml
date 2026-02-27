@@ -41,6 +41,7 @@ data:
     import re
     import signal
     import time
+    from urllib.error import HTTPError, URLError
     from pathlib import Path
     from urllib.parse import quote
     from urllib.request import Request, urlopen
@@ -84,6 +85,15 @@ data:
         if not content.strip():
             raise RuntimeError("subconverter returned an empty response")
 
+        return content
+
+
+    def fetch_direct_subscription(subscription_url: str) -> str:
+        request = Request(subscription_url, headers={"User-Agent": "openclaw-proxy-sync/1.0"})
+        with urlopen(request, timeout=60) as response:
+            content = response.read().decode("utf-8", errors="replace")
+        if not content.strip():
+            raise RuntimeError("subscription endpoint returned an empty response")
         return content
 
 
@@ -273,7 +283,12 @@ data:
 
 
     def sync_once(subscription_url: str) -> bool:
-        converted_yaml = fetch_converted_clash_config(subscription_url)
+        try:
+            converted_yaml = fetch_converted_clash_config(subscription_url)
+        except (HTTPError, URLError, RuntimeError) as error:
+            log(f"subconverter failed ({error}); trying direct subscription fetch")
+            converted_yaml = fetch_direct_subscription(subscription_url)
+
         proxy_block, proxy_names = extract_proxies_block_and_names(converted_yaml)
         final_config = build_mihomo_config(proxy_block, proxy_names)
 
