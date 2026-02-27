@@ -36,6 +36,7 @@ data:
     chmod 644 "$TOKEN_FILE" 2>/dev/null || true
   proxy-sync.py: |
     #!/usr/bin/env python3
+    import base64
     import hashlib
     import os
     import re
@@ -43,7 +44,7 @@ data:
     import time
     from urllib.error import HTTPError, URLError
     from pathlib import Path
-    from urllib.parse import quote
+    from urllib.parse import parse_qs, quote, unquote, urlparse
     from urllib.request import Request, urlopen
 
     CONVERTER_URL = "http://127.0.0.1:25500/sub"
@@ -95,6 +96,102 @@ data:
         if not content.strip():
             raise RuntimeError("subscription endpoint returned an empty response")
         return content
+
+
+    def decode_base64_subscription(content: str) -> str:
+        compact = "".join(content.split())
+        if not compact:
+            raise RuntimeError("empty subscription payload")
+        padded = compact + ("=" * (-len(compact) % 4))
+        decoded = base64.b64decode(padded).decode("utf-8", errors="replace")
+        if not decoded.strip():
+            raise RuntimeError("decoded subscription payload is empty")
+        return decoded
+
+
+    def yaml_quote(value: str) -> str:
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+
+
+    def build_vless_proxy_item(link: str):
+        parsed = urlparse(link)
+        if parsed.scheme.lower() != "vless":
+            return None
+        if "@" not in parsed.netloc:
+            return None
+
+        uuid, hostport = parsed.netloc.split("@", 1)
+        if ":" in hostport:
+            server, port_raw = hostport.rsplit(":", 1)
+        else:
+            server, port_raw = hostport, "443"
+
+        try:
+            port = int(port_raw)
+        except ValueError:
+            return None
+
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        name = unquote(parsed.fragment or f"{server}:{port}")
+
+        item = [
+            f"  - name: {yaml_quote(name)}",
+            "    type: vless",
+            f"    server: {yaml_quote(server)}",
+            f"    port: {port}",
+            f"    uuid: {yaml_quote(uuid)}",
+            "    udp: true",
+        ]
+
+        network = (query.get("type", ["tcp"])[0] or "tcp").strip()
+        item.append(f"    network: {yaml_quote(network)}")
+
+        security = (query.get("security", [""])[0] or "").strip().lower()
+        if security in ("tls", "reality"):
+            item.append("    tls: true")
+
+        sni = (query.get("sni", [""])[0] or "").strip()
+        if sni:
+            item.append(f"    servername: {yaml_quote(sni)}")
+
+        flow = (query.get("flow", [""])[0] or "").strip()
+        if flow:
+            item.append(f"    flow: {yaml_quote(flow)}")
+
+        if security == "reality":
+            pbk = (query.get("pbk", [""])[0] or "").strip()
+            sid = (query.get("sid", [""])[0] or "").strip()
+            fp = (query.get("fp", [""])[0] or "").strip()
+            if pbk:
+                item.append("    reality-opts:")
+                item.append(f"      public-key: {yaml_quote(pbk)}")
+                if sid:
+                    item.append(f"      short-id: {yaml_quote(sid)}")
+            if fp:
+                item.append(f"    client-fingerprint: {yaml_quote(fp)}")
+
+        return item, name
+
+
+    def parse_vless_subscription(content: str):
+        decoded = decode_base64_subscription(content)
+        links = [line.strip() for line in decoded.splitlines() if line.strip()]
+        proxies = []
+        names = []
+
+        for link in links:
+            proxy = build_vless_proxy_item(link)
+            if proxy is None:
+                continue
+            item, name = proxy
+            proxies.append("\n".join(item))
+            names.append(name)
+
+        if not proxies:
+            raise RuntimeError("no supported vless nodes found in subscription payload")
+
+        return "\n".join(proxies) + "\n", names
 
 
     def normalize_scalar(value: str) -> str:
@@ -196,11 +293,6 @@ data:
         return proxy_block, proxy_names
 
 
-    def yaml_quote(value: str) -> str:
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-
-
     def build_mihomo_config(proxy_block: str, proxy_names) -> str:
         proxy_group_entries = "\n".join(f"      - {yaml_quote(name)}" for name in proxy_names)
 
@@ -285,11 +377,16 @@ data:
     def sync_once(subscription_url: str) -> bool:
         try:
             converted_yaml = fetch_converted_clash_config(subscription_url)
+            proxy_block, proxy_names = extract_proxies_block_and_names(converted_yaml)
         except (HTTPError, URLError, RuntimeError) as error:
             log(f"subconverter failed ({error}); trying direct subscription fetch")
-            converted_yaml = fetch_direct_subscription(subscription_url)
+            raw_content = fetch_direct_subscription(subscription_url)
+            try:
+                proxy_block, proxy_names = extract_proxies_block_and_names(raw_content)
+            except RuntimeError:
+                log("direct payload is not clash yaml; trying base64 vless parser")
+                proxy_block, proxy_names = parse_vless_subscription(raw_content)
 
-        proxy_block, proxy_names = extract_proxies_block_and_names(converted_yaml)
         final_config = build_mihomo_config(proxy_block, proxy_names)
 
         new_hash = sha256_text(final_config)
