@@ -65,7 +65,7 @@ spec:
                 - -c
                 - |
                   TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
-                  [ -s "$TOKEN_FILE" ] && node dist/index.js health --token "$(cat "$TOKEN_FILE")" >/dev/null
+                  [ -s "$TOKEN_FILE" ] && OPENCLAW_GATEWAY_TOKEN="$(cat "$TOKEN_FILE")" node dist/index.js health >/dev/null
             failureThreshold: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -76,7 +76,7 @@ spec:
                 - -c
                 - |
                   TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
-                  [ -s "$TOKEN_FILE" ] && node dist/index.js health --token "$(cat "$TOKEN_FILE")" >/dev/null
+                  [ -s "$TOKEN_FILE" ] && OPENCLAW_GATEWAY_TOKEN="$(cat "$TOKEN_FILE")" node dist/index.js health >/dev/null
             periodSeconds: 10
             timeoutSeconds: 5
           livenessProbe:
@@ -86,7 +86,7 @@ spec:
                 - -c
                 - |
                   TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
-                  [ -s "$TOKEN_FILE" ] && node dist/index.js health --token "$(cat "$TOKEN_FILE")" >/dev/null
+                  [ -s "$TOKEN_FILE" ] && OPENCLAW_GATEWAY_TOKEN="$(cat "$TOKEN_FILE")" node dist/index.js health >/dev/null
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 5
