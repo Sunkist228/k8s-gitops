@@ -65,7 +65,13 @@ spec:
         volumeMounts:
         - name: n8n-storage
           mountPath: /home/node/.n8n
+        - name: kanban-backups
+          mountPath: /backups/kanban
       volumes:
       - name: n8n-storage
         persistentVolumeClaim:
           claimName: n8n-pvc
+      - name: kanban-backups
+        hostPath:
+          path: /backups/kanban
+          type: Directory
