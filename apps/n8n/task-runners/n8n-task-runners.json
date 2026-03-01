@@ -54,7 +54,7 @@
         "DEPLOYMENT_NAME"
       ],
       "env-overrides": {
-        "N8N_RUNNERS_STDLIB_ALLOW": "base64,hashlib,json, os",
+        "N8N_RUNNERS_STDLIB_ALLOW": "base64,hashlib,json,os,urllib",
         "N8N_RUNNERS_EXTERNAL_ALLOW": "Crypto,pycryptodome",
         "N8N_RUNNERS_HEALTH_CHECK_SERVER_HOST": "0.0.0.0"
       }
