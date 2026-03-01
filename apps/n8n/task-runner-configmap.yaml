@@ -8,6 +8,10 @@ data:
     {
       "task-runners": [
         {
+          "runner-type": "javascript",
+          "env-overrides": {}
+        },
+        {
           "runner-type": "python",
           "env-overrides": {
             "PYTHONPATH": "/opt/custom-python:/opt/runners/task-runner-python",
