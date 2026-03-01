@@ -25,10 +25,12 @@ spec:
         command:
         - /bin/sh
         - -c
-        - uv pip install --target /opt/custom-python pycryptodome
+        - |
+          cp -a /opt/runners/task-runner-python/. /work/task-runner-python/ && \
+          /work/task-runner-python/.venv/bin/pip install --no-cache-dir pycryptodome
         volumeMounts:
-        - name: python-deps
-          mountPath: /opt/custom-python
+        - name: python-runner
+          mountPath: /work/task-runner-python
       containers:
       - name: n8n-task-runner
         image: n8nio/runners:latest
@@ -44,13 +46,13 @@ spec:
               name: n8n-secret
               key: N8N_RUNNERS_AUTH_TOKEN
         volumeMounts:
-        - name: python-deps
-          mountPath: /opt/custom-python
+        - name: python-runner
+          mountPath: /opt/runners/task-runner-python
         - name: task-runner-config
           mountPath: /etc/n8n-task-runners.json
           subPath: n8n-task-runners.json
       volumes:
-      - name: python-deps
+      - name: python-runner
         emptyDir: {}
       - name: task-runner-config
         configMap:
