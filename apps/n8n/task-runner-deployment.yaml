@@ -27,7 +27,7 @@ spec:
         - -c
         - |
           cp -a /opt/runners/task-runner-python/. /work/task-runner-python/ && \
-          /work/task-runner-python/.venv/bin/pip install --no-cache-dir pycryptodome
+          /work/task-runner-python/.venv/bin/python -m pip install --no-cache-dir pycryptodome
         volumeMounts:
         - name: python-runner
           mountPath: /work/task-runner-python
