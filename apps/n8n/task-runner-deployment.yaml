@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n-task-runner
+  namespace: n8n
+  labels:
+    app: n8n-task-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8n-task-runner
+  template:
+    metadata:
+      labels:
+        app: n8n-task-runner
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      initContainers:
+      - name: install-python-deps
+        image: n8nio/runners:latest
+        command:
+        - /bin/sh
+        - -c
+        - uv pip install --target /opt/custom-python pycryptodome
+        volumeMounts:
+        - name: python-deps
+          mountPath: /opt/custom-python
+      containers:
+      - name: n8n-task-runner
+        image: n8nio/runners:latest
+        ports:
+        - containerPort: 5680
+          name: health
+        env:
+        - name: N8N_RUNNERS_TASK_BROKER_URI
+          value: "http://n8n-service:5679"
+        - name: N8N_RUNNERS_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: n8n-secret
+              key: N8N_RUNNERS_AUTH_TOKEN
+        volumeMounts:
+        - name: python-deps
+          mountPath: /opt/custom-python
+        - name: task-runner-config
+          mountPath: /etc/n8n-task-runners.json
+          subPath: n8n-task-runners.json
+      volumes:
+      - name: python-deps
+        emptyDir: {}
+      - name: task-runner-config
+        configMap:
+          name: n8n-task-runner-config

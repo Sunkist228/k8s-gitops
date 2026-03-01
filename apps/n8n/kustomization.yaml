@@ -5,6 +5,9 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - secret-externalsecret.yaml
+  - task-runner-configmap.yaml
   - deployment.yaml
   - service.yaml
+  - task-runner-deployment.yaml
+  - task-runner-service.yaml
   - ingress.yaml

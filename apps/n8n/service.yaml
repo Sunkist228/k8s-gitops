@@ -10,3 +10,6 @@ spec:
   - port: 5678
     targetPort: web
     name: web
+  - port: 5679
+    targetPort: broker
+    name: broker
