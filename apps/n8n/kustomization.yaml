@@ -5,9 +5,14 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - secret-externalsecret.yaml
-  - task-runner-configmap.yaml
   - deployment.yaml
   - service.yaml
   - task-runner-deployment.yaml
   - task-runner-service.yaml
   - ingress.yaml
+
+configMapGenerator:
+  - name: n8n-task-runner-config
+    namespace: n8n
+    files:
+      - n8n-task-runners.json=task-runners/n8n-task-runners.json
