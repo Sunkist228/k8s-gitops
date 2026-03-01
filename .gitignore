@@ -2,3 +2,4 @@ __pycache__
 tmp-local-proxytest
 .venv
 local
+tmp-livesync-src
