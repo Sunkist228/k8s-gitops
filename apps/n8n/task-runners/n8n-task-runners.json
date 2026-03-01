@@ -2,10 +2,14 @@
   "task-runners": [
     {
       "runner-type": "javascript",
+      "working-directory": "/opt/runners/task-runner-javascript",
+      "health-check-server-port": "5681",
       "env-overrides": {}
     },
     {
       "runner-type": "python",
+      "working-directory": "/opt/runners/task-runner-python",
+      "health-check-server-port": "5682",
       "env-overrides": {
         "PYTHONPATH": "/opt/custom-python:/opt/runners/task-runner-python",
         "N8N_RUNNERS_EXTERNAL_ALLOW": "Crypto,pycryptodome"
