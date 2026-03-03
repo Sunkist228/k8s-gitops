@@ -39,12 +39,17 @@ spec:
               value: "1"
             - name: CORE_DATA_DIR
               value: /data
+            - name: CORE_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: playerok-secrets
+                  key: TOTP_ENCRYPTION_KEY
             - name: CORE_API_HOST
               value: "0.0.0.0"
             - name: CORE_API_PORT
               value: "8765"
             - name: BACKEND_URL
-              value: "https://api.devflux.ru"
+              value: "http://backend:8000"
           volumeMounts:
             - name: core-data
               mountPath: /data
