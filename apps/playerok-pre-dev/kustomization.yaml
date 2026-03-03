@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: playerok-pre-dev
 
 resources:
+  - namespace.yaml
   - config-backend.yaml
   - secrets-externalsecret.yaml
   - deployment-backend.yaml
