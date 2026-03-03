@@ -4,14 +4,10 @@ kind: Kustomization
 namespace: playerok-pre-dev
 
 resources:
-  - namespace.yaml
   - config-backend.yaml
   - secrets-externalsecret.yaml
   - deployment-backend.yaml
   - deployment-frontend.yaml
-  - deployment-core.yaml
   - service-backend.yaml
   - service-frontend.yaml
-  - service-core.yaml
   - ingress-frontend.yaml
-  - ingress-core.yaml
