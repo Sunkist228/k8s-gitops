@@ -18,6 +18,8 @@ spec:
       environment: pre-dev
   template:
     metadata:
+      annotations:
+        gitops.devflux.io/restarted-at: "2026-03-04T00:10:00Z"
       labels:
         app: core
         environment: pre-dev
