@@ -1,0 +1,70 @@
+# Pre-dev contour: core deployment (namespace playerok-pre-dev)
+# Core-only environment — no DB, no frontend/backend.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core
+  namespace: playerok-pre-dev
+  labels:
+    app: core
+    environment: pre-dev
+    component: core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core
+      environment: pre-dev
+  template:
+    metadata:
+      labels:
+        app: core
+        environment: pre-dev
+        component: core
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      containers:
+        - name: core
+          image: harbor.devflux.ru/playerok-devflux/core-pre-dev:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8765
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: CORE_DATA_DIR
+              value: /data
+            - name: CORE_API_HOST
+              value: "0.0.0.0"
+            - name: CORE_API_PORT
+              value: "8765"
+            - name: BACKEND_URL
+              value: "https://api.devflux.ru"
+          volumeMounts:
+            - name: core-data
+              mountPath: /data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8765
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8765
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: core-data
+          emptyDir: {}

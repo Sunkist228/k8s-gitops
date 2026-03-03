@@ -1,0 +1,21 @@
+# Pre-dev contour: core service (namespace playerok-pre-dev)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+  namespace: playerok-pre-dev
+  labels:
+    app: core
+    environment: pre-dev
+    component: core
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8765
+      targetPort: 8765
+      protocol: TCP
+  selector:
+    app: core
+    environment: pre-dev
