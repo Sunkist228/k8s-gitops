@@ -1,7 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 namespace: playerok-pre-dev
+
 resources:
+  - config-backend.yaml
+  - secrets-externalsecret.yaml
+  - deployment-backend.yaml
+  - deployment-frontend.yaml
   - deployment-core.yaml
+  - service-backend.yaml
+  - service-frontend.yaml
   - service-core.yaml
+  - ingress-frontend.yaml
   - ingress-core.yaml
