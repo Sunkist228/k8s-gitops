@@ -1,0 +1,50 @@
+# Pre-dev: frontend deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+    environment: pre-dev
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+      environment: pre-dev
+  template:
+    metadata:
+      labels:
+        app: frontend
+        environment: pre-dev
+        component: frontend
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      containers:
+        - name: frontend
+          image: harbor.devflux.ru/playerok-devflux/frontend-pre-dev:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

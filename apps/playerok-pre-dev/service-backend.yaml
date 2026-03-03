@@ -1,0 +1,19 @@
+# Pre-dev: backend service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app: backend
+    environment: pre-dev
+    component: api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: backend
+    environment: pre-dev

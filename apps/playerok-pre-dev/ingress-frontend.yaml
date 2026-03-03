@@ -1,0 +1,28 @@
+# Pre-dev: frontend ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+    environment: pre-dev
+    component: frontend
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: playerok-devflux.pre-dev.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - playerok-devflux.pre-dev.devflux.ru
+      secretName: frontend-tls
