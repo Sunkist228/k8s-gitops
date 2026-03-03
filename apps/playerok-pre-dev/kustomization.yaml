@@ -4,3 +4,4 @@ namespace: playerok-pre-dev
 resources:
   - deployment-core.yaml
   - service-core.yaml
+  - ingress-core.yaml
