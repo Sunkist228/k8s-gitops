@@ -25,3 +25,7 @@ path "secret/data/databases/*" {
 path "secret/data/openclaw/*" {
   capabilities = ["read"]
 }
+
+path "secret/data/home-assistant/*" {
+  capabilities = ["read"]
+}
