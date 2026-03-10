@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tasks-devflux
+
+resources:
+- secret.yaml
+- pvc.yaml
+- deployment.yaml
+
+commonLabels:
+  app: tasks-devflux
+  version: v0.1.0
+
+images:
+- name: harbor.devflux.ru/tasks-devflux/bot-prod
+  newTag: latest
