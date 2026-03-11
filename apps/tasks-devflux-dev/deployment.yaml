@@ -1,0 +1,49 @@
+# Tasks Devflux Bot: Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot
+  namespace: tasks-devflux-dev
+  labels:
+    app: tasks-devflux
+    component: bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tasks-devflux
+      component: bot
+  template:
+    metadata:
+      labels:
+        app: tasks-devflux
+        component: bot
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: bot
+          image: harbor.devflux.ru/tasks-devflux/bot-dev:latest
+          imagePullPolicy: Always
+          command: ["python", "-m", "app.main"]
+          envFrom:
+            - secretRef:
+                name: tasks-devflux-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: tasks-devflux-data
