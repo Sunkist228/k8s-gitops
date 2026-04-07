@@ -23,7 +23,7 @@ spec:
         - name: harbor-registry
       containers:
         - name: frontend
-          image: harbor.devflux.ru/playerok-devflux/frontend-dev:63
+          image: harbor.devflux.ru/playerok-devflux/frontend-dev:64
           imagePullPolicy: Always
           ports:
             - name: http
