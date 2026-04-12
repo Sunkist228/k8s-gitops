@@ -25,6 +25,11 @@ spec:
         - name: frontend
           image: harbor.devflux.ru/playerok-devflux/frontend-dev:v0.1.0-dev.78--sha.dbed2d72e02d
           imagePullPolicy: Always
+          env:
+            - name: NGINX_RESOLVER
+              value: "10.152.183.10"
+            - name: BACKEND_HOST
+              value: "backend.playerok-dev.svc.cluster.local"
           ports:
             - name: http
               containerPort: 80
