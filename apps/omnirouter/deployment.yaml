@@ -22,26 +22,8 @@ spec:
           - /bin/sh
           - -c
           - |
-            set -x
-            npm install -g omnirouter@latest
-            NPM_BIN=$(npm root -g)
-            echo "NPM_BIN=$NPM_BIN"
-            ls -la "$NPM_BIN/" || true
-            ls -la "$NPM_BIN/omnirouter/" || true
-
-            if [ -f "$NPM_BIN/omnirouter/dist/index.js" ]; then
-              echo "Found: $NPM_BIN/omnirouter/dist/index.js"
-              exec node "$NPM_BIN/omnirouter/dist/index.js" --no-open
-            elif [ -f "$NPM_BIN/omnirouter/index.js" ]; then
-              echo "Found: $NPM_BIN/omnirouter/index.js"
-              exec node "$NPM_BIN/omnirouter/index.js" --no-open
-            else
-              echo "ERROR: Cannot find omnirouter entry point"
-              echo "Searching for omnirouter files:"
-              find "$NPM_BIN" -name "*omnirouter*" -o -name "index.js" | head -20
-              sleep 30
-              exit 1
-            fi
+            npm install -g omniroute@latest
+            exec npx omniroute --no-open
         ports:
         - name: api
           containerPort: 20128
