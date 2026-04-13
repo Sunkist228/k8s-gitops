@@ -70,7 +70,7 @@ spec:
                   [ -s "$TOKEN_FILE" ] && OPENCLAW_GATEWAY_TOKEN="$(cat "$TOKEN_FILE")" node dist/index.js health >/dev/null
             failureThreshold: 30
             periodSeconds: 10
-            timeoutSeconds: 5
+            timeoutSeconds: 15
           readinessProbe:
             exec:
               command:
@@ -80,7 +80,7 @@ spec:
                   TOKEN_FILE="/home/node/.openclaw/bootstrap/gateway-token"
                   [ -s "$TOKEN_FILE" ] && OPENCLAW_GATEWAY_TOKEN="$(cat "$TOKEN_FILE")" node dist/index.js health >/dev/null
             periodSeconds: 10
-            timeoutSeconds: 5
+            timeoutSeconds: 15
           livenessProbe:
             exec:
               command:
@@ -91,7 +91,7 @@ spec:
                   [ -s "$TOKEN_FILE" ] && OPENCLAW_GATEWAY_TOKEN="$(cat "$TOKEN_FILE")" node dist/index.js health >/dev/null
             initialDelaySeconds: 30
             periodSeconds: 30
-            timeoutSeconds: 5
+            timeoutSeconds: 15
         - name: mihomo
           image: metacubex/mihomo:latest
           command:
