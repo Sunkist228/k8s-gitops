@@ -23,7 +23,8 @@ spec:
           - -c
           - |
             npm install -g omnirouter@latest
-            exec npx omniroute --no-open
+            export PATH="/usr/local/bin:$PATH"
+            exec npx -y omnirouter --no-open
         ports:
         - name: api
           containerPort: 20128
