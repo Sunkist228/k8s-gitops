@@ -34,7 +34,6 @@ spec:
           - /bin/sh
           - -c
           - |
-            npm install -g omniroute@latest
             exec npx omniroute --no-open
         ports:
         - name: api
