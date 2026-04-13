@@ -23,9 +23,16 @@ spec:
           - -c
           - |
             npm install -g omnirouter@latest
-            export PATH="/usr/local/bin:$PATH"
-            cd /root
-            exec node /usr/local/lib/node_modules/omnirouter/dist/index.js --no-open
+            NPM_BIN=$(npm root -g)
+            if [ -f "$NPM_BIN/omnirouter/dist/index.js" ]; then
+              exec node "$NPM_BIN/omnirouter/dist/index.js" --no-open
+            elif [ -f "$NPM_BIN/omnirouter/index.js" ]; then
+              exec node "$NPM_BIN/omnirouter/index.js" --no-open
+            else
+              echo "Cannot find omnirouter entry point"
+              find $NPM_BIN -name "index.js" | grep omnirouter
+              exit 1
+            fi
         ports:
         - name: api
           containerPort: 20128
