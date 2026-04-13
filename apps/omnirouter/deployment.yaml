@@ -15,6 +15,18 @@ spec:
       labels:
         app: omnirouter
     spec:
+      initContainers:
+      - name: install-omniroute
+        image: node:22-alpine
+        command:
+          - /bin/sh
+          - -c
+          - |
+            npm install -g omniroute@latest
+            echo "Installation complete"
+        volumeMounts:
+        - name: npm-cache
+          mountPath: /root/.npm
       containers:
       - name: omnirouter
         image: node:22-alpine
@@ -58,3 +70,6 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
+      volumes:
+      - name: npm-cache
+        emptyDir: {}
