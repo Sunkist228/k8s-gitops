@@ -23,6 +23,7 @@ spec:
           - -c
           - |
             npm install -g omniroute@latest
+            ls -la /usr/local/lib/node_modules/omniroute/
             echo "Installation complete"
         volumeMounts:
         - name: npm-cache
