@@ -53,9 +53,6 @@ spec:
               exit 1
             fi
         ports:
-        - name: api
-          containerPort: 20128
-          protocol: TCP
         - name: dashboard
           containerPort: 20129
           protocol: TCP
@@ -89,6 +86,29 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
+      - name: api-forwarder
+        image: alpine/socat:latest
+        command:
+          - /bin/sh
+          - -c
+          - |
+            exec socat TCP-LISTEN:20128,bind="${POD_IP}",fork,reuseaddr TCP:127.0.0.1:20128
+        ports:
+        - name: api
+          containerPort: 20128
+          protocol: TCP
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
       volumes:
       - name: npm-cache
         emptyDir: {}
