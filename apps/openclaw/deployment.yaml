@@ -44,7 +44,8 @@ spec:
                 exit 1
               fi
               TOKEN_FROM_FILE="$(cat "$TOKEN_FILE")"
-              exec node dist/index.js gateway --bind loopback --port 18789 --token "$TOKEN_FROM_FILE"
+              node dist/index.js config set gateway.controlUi.allowedOrigins "['https://openclaw.devflux.ru']" --json >/dev/null
+              exec node dist/index.js gateway --bind lan --port 18789 --token "$TOKEN_FROM_FILE"
           env:
             - name: HTTP_PROXY
               value: http://127.0.0.1:7890

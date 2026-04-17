@@ -18,16 +18,19 @@ spec:
       initContainers:
       - name: install-omniroute
         image: node:22-alpine
+        env:
+        - name: NPM_CONFIG_PREFIX
+          value: /opt/npm-global
         command:
           - /bin/sh
           - -c
           - |
             npm install -g omniroute@latest
-            ls -la /usr/local/lib/node_modules/omniroute/
+            ls -la /opt/npm-global/lib/node_modules/omniroute/
             echo "Installation complete"
         volumeMounts:
         - name: npm-cache
-          mountPath: /usr/local/lib/node_modules
+          mountPath: /opt/npm-global
       containers:
       - name: omnirouter
         image: node:22-alpine
@@ -35,10 +38,10 @@ spec:
           - /bin/sh
           - -c
           - |
-            if [ -d /usr/local/lib/node_modules/omniroute ]; then
-              exec node /usr/local/lib/node_modules/omniroute/dist/index.js --no-open
+            if [ -x /opt/npm-global/bin/omniroute ]; then
+              exec /opt/npm-global/bin/omniroute --no-open
             else
-              echo "omniroute not found in /usr/local/lib/node_modules/"
+              echo "omniroute binary not found in /opt/npm-global/bin/"
               exit 1
             fi
         ports:
@@ -54,6 +57,9 @@ spec:
             secretKeyRef:
               name: omnirouter-env
               key: OMNIROUTE_MEMORY_MB
+        volumeMounts:
+        - name: npm-cache
+          mountPath: /opt/npm-global
         resources:
           requests:
             memory: "512Mi"
