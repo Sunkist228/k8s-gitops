@@ -35,9 +35,6 @@ metadata:
   namespace: omnirouter
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: omnirouter-basic-auth
-    nginx.ingress.kubernetes.io/auth-realm: 'Authentication Required - OmniRouter API'
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
