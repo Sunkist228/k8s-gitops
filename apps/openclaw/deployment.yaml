@@ -46,6 +46,39 @@ spec:
               TOKEN_FROM_FILE="$(cat "$TOKEN_FILE")"
               node dist/index.js config set gateway.controlUi.allowedOrigins "['https://openclaw.devflux.ru']" --json >/dev/null
               node dist/index.js config set channels.telegram.proxy "http://127.0.0.1:7890" >/dev/null
+              node - <<'NODE'
+              const fs = require("fs");
+
+              const configPath = "/home/node/.openclaw/openclaw.json";
+              const cfg = JSON.parse(fs.readFileSync(configPath, "utf8"));
+              cfg.agents ??= {};
+              cfg.agents.defaults ??= {};
+              cfg.agents.defaults.model ??= {};
+              cfg.agents.defaults.model.primary = "custom-api-omnirouter-devflux-ru/kr/claude-sonnet-4.5";
+              cfg.agents.defaults.model.fallbacks = [];
+              if (cfg.agents.defaults.models?.["anthropic/claude-opus-4-6"]) {
+                delete cfg.agents.defaults.models["anthropic/claude-opus-4-6"];
+              }
+              fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2) + "\n");
+
+              const modelsPath = "/home/node/.openclaw/agents/main/agent/models.json";
+              if (!fs.existsSync(modelsPath)) {
+                process.exit(0);
+              }
+              const models = JSON.parse(fs.readFileSync(modelsPath, "utf8"));
+              const provider = models.providers?.["custom-api-omnirouter-devflux-ru"];
+              if (provider) {
+                provider.api = "openai-chat-completions";
+                for (const model of provider.models ?? []) {
+                  if (model.id === "kr/claude-sonnet-4.5") {
+                    model.contextWindow = 200000;
+                    model.maxTokens = 8192;
+                    model.api = "openai-chat-completions";
+                  }
+                }
+                fs.writeFileSync(modelsPath, JSON.stringify(models, null, 2) + "\n");
+              }
+              NODE
               exec node dist/index.js gateway --bind lan --port 18789 --token "$TOKEN_FROM_FILE"
           env:
             - name: HTTP_PROXY
