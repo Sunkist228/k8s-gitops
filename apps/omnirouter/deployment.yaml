@@ -38,10 +38,18 @@ spec:
           - /bin/sh
           - -c
           - |
-            if [ -x /opt/npm-global/bin/omniroute ]; then
-              exec /opt/npm-global/bin/omniroute --no-open
+            APP_DIR=/opt/npm-global/lib/node_modules/omniroute/app
+            if [ -f "$APP_DIR/server.js" ]; then
+              cd "$APP_DIR"
+              export HOSTNAME=0.0.0.0
+              export OMNIROUTE_PORT=20128
+              export API_PORT=20128
+              export DASHBOARD_PORT=20129
+              export PORT=20129
+              export NODE_ENV=production
+              exec node --max-old-space-size="${OMNIROUTE_MEMORY_MB:-512}" server.js
             else
-              echo "omniroute binary not found in /opt/npm-global/bin/"
+              echo "omniroute server.js not found at $APP_DIR"
               exit 1
             fi
         ports:
