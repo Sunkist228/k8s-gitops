@@ -45,6 +45,7 @@ spec:
               fi
               TOKEN_FROM_FILE="$(cat "$TOKEN_FILE")"
               node dist/index.js config set gateway.controlUi.allowedOrigins "['https://openclaw.devflux.ru']" --json >/dev/null
+              node dist/index.js config set channels.telegram.proxy "http://127.0.0.1:7890" >/dev/null
               exec node dist/index.js gateway --bind lan --port 18789 --token "$TOKEN_FROM_FILE"
           env:
             - name: HTTP_PROXY
