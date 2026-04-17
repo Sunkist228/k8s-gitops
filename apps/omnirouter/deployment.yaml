@@ -62,6 +62,8 @@ spec:
             secretKeyRef:
               name: omnirouter-env
               key: OMNIROUTE_MEMORY_MB
+        - name: DISABLE_SQLITE_AUTO_BACKUP
+          value: "true"
         volumeMounts:
         - name: npm-cache
           mountPath: /opt/npm-global
