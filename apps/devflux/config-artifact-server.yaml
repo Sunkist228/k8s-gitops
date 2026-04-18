@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-server-config
+  labels:
+    app: artifact-server
+    component: artifacts
+    environment: prod
+data:
+  AUTO_CREATE_TABLES: "false"
+  RUN_DB_MIGRATIONS: "true"
+  S3_ARTIFACT_BUCKET: "devflux-artifacts"
+  S3_REGION: "us-east-1"
+  PUBLIC_BASE_URL: "https://artifacts.devflux.ru"
+  MAX_UPLOAD_SIZE_BYTES: "524288000"
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/metrics"
+  REDIS_ENABLED: "true"
+  LOG_LEVEL: "INFO"

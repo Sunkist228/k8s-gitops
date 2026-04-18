@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    component: artifacts
+    environment: dev
+spec:
+  selector:
+    matchLabels:
+      app: artifact-server
+      environment: dev
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

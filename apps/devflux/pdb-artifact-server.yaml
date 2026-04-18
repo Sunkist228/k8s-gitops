@@ -1,0 +1,14 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    component: artifacts
+    environment: prod
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: artifact-server
+      environment: prod

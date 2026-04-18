@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    component: artifacts
+    environment: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: artifact-server
+      environment: prod
+  template:
+    metadata:
+      labels:
+        app: artifact-server
+        component: artifacts
+        environment: prod
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: artifact-server
+          image: harbor.devflux.ru/devflux/artifact-server:master-latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: artifact-server-config
+            - secretRef:
+                name: devflux-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30

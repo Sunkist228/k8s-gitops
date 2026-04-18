@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    component: artifacts
+    environment: prod
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "500m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts:
+        - artifacts.devflux.ru
+      secretName: artifact-server-prod-tls
+  rules:
+    - host: artifacts.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: artifact-server
+                port:
+                  number: 8080
