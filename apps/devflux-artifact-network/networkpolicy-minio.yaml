@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-devflux-artifact-to-minio
+  namespace: devops-tools
+spec:
+  podSelector:
+    matchLabels:
+      app: minio
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: devflux
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: devflux-dev
+      ports:
+        - protocol: TCP
+          port: 9000

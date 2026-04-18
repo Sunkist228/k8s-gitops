@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-devflux-artifact-to-postgres
+  namespace: databases
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: devflux
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: devflux-dev
+      ports:
+        - protocol: TCP
+          port: 5432
