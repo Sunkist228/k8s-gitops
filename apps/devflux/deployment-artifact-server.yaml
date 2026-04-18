@@ -26,7 +26,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: artifact-server
-          image: harbor.devflux.ru/devflux/artifact-server:master-latest
+          image: harbor.devflux.ru/devflux/artifact-server:master-07c79ff
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
