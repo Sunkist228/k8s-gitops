@@ -69,6 +69,50 @@ data:
       mv "$tmp_file" "$CFG"
     fi
 
+    python3 - <<'PY'
+    from pathlib import Path
+
+    cfg = Path("/config/configuration.yaml")
+    try:
+        content = cfg.read_text()
+    except OSError:
+        raise SystemExit(0)
+
+    homekit_block = '''homekit:
+      - name: HASS Bridge
+        port: 21063
+        advertise_ip: 192.168.0.20
+        filter:
+          include_entities:
+            - switch.pc_power
+            - binary_sensor.sunkist_pc_online
+        entity_config:
+          switch.pc_power:
+            name: "Компьютер"
+            type: switch
+          binary_sensor.sunkist_pc_online:
+            name: "Компьютер онлайн"
+    '''
+
+    marker = "\nyandex_smart_home:"
+    start = content.find("\nhomekit:")
+    if start == -1 and content.startswith("homekit:"):
+        start = 0
+    if start != -1:
+        block_start = start + (1 if content[start] == "\n" else 0)
+        end = content.find(marker, block_start)
+        if end == -1:
+            end = len(content)
+        updated = content[:block_start] + homekit_block + content[end:]
+    elif marker in content:
+        updated = content.replace(marker, "\n" + homekit_block + marker, 1)
+    else:
+        updated = content.rstrip() + "\n\n" + homekit_block
+
+    if updated != content:
+        cfg.write_text(updated)
+    PY
+
     # Remove legacy SUNKIST-PC template switch from root configuration to avoid duplicate entities.
     if grep -q 'unique_id:[[:space:]]*sunkist_pc' "$CFG"; then
       tmp_file="$(mktemp)"
@@ -213,6 +257,7 @@ data:
       - binary_sensor:
           name: "SUNKIST-PC online"
           unique_id: sunkist_pc_online
+          device_class: connectivity
           command: "ping -c 2 -W 2 __PC_HOST__ >/dev/null 2>&1 && echo ON || echo OFF"
           payload_on: "ON"
           payload_off: "OFF"
