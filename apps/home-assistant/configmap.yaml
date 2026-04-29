@@ -113,6 +113,46 @@ data:
         cfg.write_text(updated)
     PY
 
+    python3 - <<'PY'
+    from pathlib import Path
+
+    cfg = Path("/config/configuration.yaml")
+    try:
+        lines = cfg.read_text().splitlines()
+    except OSError:
+        raise SystemExit(0)
+
+    desired = {
+        "external_url": "https://home.devflux.ru",
+        "internal_url": "http://192.168.0.20:8123",
+    }
+
+    try:
+        start = next(i for i, line in enumerate(lines) if line.strip() == "homeassistant:")
+    except StopIteration:
+        lines.extend(["", "homeassistant:"])
+        start = len(lines) - 1
+
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if lines[i] and not lines[i].startswith((" ", "\t", "#")):
+            end = i
+            break
+
+    block = lines[start + 1:end]
+    for key, value in desired.items():
+        prefix = f"  {key}:"
+        for idx, line in enumerate(block):
+            if line.startswith(prefix):
+                block[idx] = f"{prefix} {value}"
+                break
+        else:
+            block.append(f"{prefix} {value}")
+
+    updated = lines[:start + 1] + block + lines[end:]
+    cfg.write_text("\n".join(updated) + "\n")
+    PY
+
     # Remove legacy SUNKIST-PC template switch from root configuration to avoid duplicate entities.
     if grep -q 'unique_id:[[:space:]]*sunkist_pc' "$CFG"; then
       tmp_file="$(mktemp)"

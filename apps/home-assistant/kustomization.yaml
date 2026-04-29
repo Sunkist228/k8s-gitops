@@ -10,3 +10,4 @@ resources:
   - pc-power-externalsecret.yaml
   - deployment.yaml
   - service.yaml
+  - ingress.yaml
