@@ -81,7 +81,8 @@ data:
       mv "$tmp_file" "$CFG"
     fi
 
-    # Remove legacy command_line binary_sensor; status is provided by package ping sensor.
+    # Remove legacy command_line/ping binary_sensor from root configuration;
+    # status is provided by the generated package.
     if grep -q 'name:[[:space:]]*SUNKIST-PC online' "$CFG"; then
       tmp_file="$(mktemp)"
       awk '
@@ -95,6 +96,35 @@ data:
 
     # Keep integration references on the canonical entity id.
     sed -i 's/switch\.sunkist_pc/switch.pc_power/g' "$CFG"
+
+    AUTOS='/config/automations.yaml'
+    if [ -f "$AUTOS" ]; then
+      sed -i 's/switch\.sunkist_pc/switch.pc_power/g' "$AUTOS"
+      python3 - <<'PY'
+    from pathlib import Path
+
+    path = Path("/config/automations.yaml")
+    try:
+        content = path.read_text()
+    except OSError:
+        raise SystemExit(0)
+
+    updated = content.replace(
+        '''- service: notify.telegram
+          data:
+            message: "Hello! Reminder: check your Obsidian Kanban tasks and today's todos."
+    ''',
+        '''- service: persistent_notification.create
+          data:
+            title: "Tasks reminder"
+            message: "Hello! Reminder: check your Obsidian Kanban tasks and today's todos."
+            notification_id: egor_tasks_on_arrival
+    ''',
+    )
+    if updated != content:
+        path.write_text(updated)
+    PY
+    fi
 
     # Normalize stored dashboard/exposure references and remove stale template entity.
     python3 - <<'PY'
@@ -179,12 +209,15 @@ data:
   pc_power.package.yaml.tmpl: |
     wake_on_lan:
 
-    binary_sensor:
-      - platform: ping
-        name: "SUNKIST-PC online"
-        host: "__PC_HOST__"
-        count: 2
-        scan_interval: 30
+    command_line:
+      - binary_sensor:
+          name: "SUNKIST-PC online"
+          unique_id: sunkist_pc_online
+          command: "ping -c 2 -W 2 __PC_HOST__ >/dev/null 2>&1 && echo ON || echo OFF"
+          payload_on: "ON"
+          payload_off: "OFF"
+          scan_interval: 30
+          command_timeout: 10
 
     shell_command:
       pc_sleep: >-
