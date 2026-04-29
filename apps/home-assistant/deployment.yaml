@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       annotations:
-        home-assistant.devflux.io/restart-trigger: "2026-04-29-03"
+        home-assistant.devflux.io/restart-trigger: "2026-04-29-04"
       labels:
         app: home-assistant
     spec:

@@ -79,19 +79,16 @@ data:
         raise SystemExit(0)
 
     homekit_block = '''homekit:
-      - name: HASS Bridge
-        port: 21063
+      - name: Devflux Home
+        port: 21064
         advertise_ip: 192.168.0.20
         filter:
           include_entities:
             - switch.pc_power
-            - binary_sensor.sunkist_pc_online
         entity_config:
           switch.pc_power:
             name: "Компьютер"
             type: switch
-          binary_sensor.sunkist_pc_online:
-            name: "Компьютер онлайн"
     '''
 
     marker = "\nyandex_smart_home:"
@@ -108,6 +105,43 @@ data:
         updated = content.replace(marker, "\n" + homekit_block + marker, 1)
     else:
         updated = content.rstrip() + "\n\n" + homekit_block
+
+    if updated != content:
+        cfg.write_text(updated)
+    PY
+
+    python3 - <<'PY'
+    from pathlib import Path
+
+    cfg = Path("/config/configuration.yaml")
+    try:
+        content = cfg.read_text()
+    except OSError:
+        raise SystemExit(0)
+
+    logger_block = '''logger:
+      default: warning
+      logs:
+        homeassistant.components.homekit: debug
+        pyhap: debug
+    '''
+
+    marker = "\nhomekit:"
+    start = content.find("\nlogger:")
+    if start == -1 and content.startswith("logger:"):
+        start = 0
+    if start != -1:
+        block_start = start + (1 if content[start] == "\n" else 0)
+        end = len(content)
+        for idx in range(block_start + 1, len(content)):
+            if content[idx] == "\n" and idx + 1 < len(content) and not content[idx + 1].isspace():
+                end = idx + 1
+                break
+        updated = content[:block_start] + logger_block + content[end:]
+    elif marker in content:
+        updated = content.replace(marker, "\n" + logger_block + marker, 1)
+    else:
+        updated = content.rstrip() + "\n\n" + logger_block
 
     if updated != content:
         cfg.write_text(updated)
