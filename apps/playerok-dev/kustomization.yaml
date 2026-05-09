@@ -5,9 +5,13 @@ namespace: playerok-dev
 
 resources:
   - config-backend.yaml
+  - config-artifact-server.yaml
   - secrets-externalsecret.yaml
+  - secrets-artifact-server-externalsecret.yaml
   - deployment-backend.yaml
+  - deployment-artifact-server.yaml
   - deployment-frontend.yaml
   - service-backend.yaml
+  - service-artifact-server.yaml
   - service-frontend.yaml
   - ingress-frontend.yaml

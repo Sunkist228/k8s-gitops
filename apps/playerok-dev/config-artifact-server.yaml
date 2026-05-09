@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-server-config
+  labels:
+    app: artifact-server
+    environment: dev
+    component: artifacts
+data:
+  AUTO_CREATE_TABLES: "true"
+  S3_ARTIFACT_BUCKET: "playerok-artifacts"
+  S3_REGION: "us-east-1"
+  PUBLIC_BASE_URL: "https://playerok-devflux.dev.devflux.ru/api/artifacts"
+  REDIS_URL: "redis://redis.playerok-dev.svc.cluster.local:6379/0"
+  REDIS_ENABLED: "true"
+  MAX_UPLOAD_SIZE_BYTES: "524288000"
+  METRICS_ENABLED: "true"
+  METRICS_PATH: "/metrics"
