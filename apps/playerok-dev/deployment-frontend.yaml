@@ -33,7 +33,7 @@ spec:
             - name: BACKEND_UPSTREAM
               value: "backend.playerok-dev.svc.cluster.local:8000"
             - name: ARTIFACT_SERVER_UPSTREAM
-              value: "backend.playerok-dev.svc.cluster.local:8000"
+              value: "artifact-server.playerok-dev.svc.cluster.local:8080"
           ports:
             - name: http
               containerPort: 80

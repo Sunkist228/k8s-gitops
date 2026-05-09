@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    environment: dev
+    component: artifacts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: artifact-server
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: artifact-server
+        environment: dev
+        component: artifacts
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: artifact-server
+          image: harbor.devflux.ru/playerok-devflux/artifact-server-dev:dev
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: artifact-server-config
+            - secretRef:
+                name: artifact-server-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5

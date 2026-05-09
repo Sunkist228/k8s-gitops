@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    environment: dev
+    component: artifacts
+    monitoring.devflux.io/enabled: "true"
+spec:
+  type: ClusterIP
+  selector:
+    app: artifact-server
+    environment: dev
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
