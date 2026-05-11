@@ -26,7 +26,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: backend
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.3.4-dev.141-sha.2821f402c805
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.3.5-dev.143-sha.3ce570d2554d
           imagePullPolicy: Always
           ports:
             - name: http
