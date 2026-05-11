@@ -26,7 +26,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: artifact-server
-          image: harbor.devflux.ru/playerok-devflux/artifact-server-dev:v0.3.5-dev.143-sha.3ce570d2554d
+          image: harbor.devflux.ru/playerok-devflux/artifact-server-dev:v0.3.6-dev.145-sha.29ce1d0fbf6b
           imagePullPolicy: Always
           ports:
             - name: http
