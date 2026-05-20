@@ -17,10 +17,10 @@ spec:
   ingressClassName: public
   tls:
     - hosts:
-        - notes.example.com
-      secretName: notes-example-com-tls
+        - notes.devflux.ru
+      secretName: notes-devflux-ru-tls
   rules:
-    - host: notes.example.com
+    - host: notes.devflux.ru
       http:
         paths:
           - path: /

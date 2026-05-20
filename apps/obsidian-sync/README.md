@@ -13,7 +13,7 @@
 - `NetworkPolicy` пускает трафик только от ingress controller и pods с label `obsidian-sync-access=true`;
 - `CronJob` делает логический dump CouchDB в отдельный backup PVC.
 
-По умолчанию домен: `notes.example.com`. Namespace: `obsidian-sync`.
+По умолчанию домен: `notes.devflux.ru`. Namespace: `obsidian-sync`.
 
 В этом репозитории runtime changes доставляются через Argo CD. Не применяйте приложение вручную через `kubectl apply`, кроме аварийной проверки в отдельном кластере.
 
@@ -37,7 +37,7 @@ apps/obsidian-sync/
 
 ## Что заменить перед применением
 
-- `notes.example.com` в `ingress.yaml` и `configmap.yaml`: реальный домен CouchDB.
+- `notes.devflux.ru` в `ingress.yaml` и `configmap.yaml`: реальный домен CouchDB.
 - `ingressClassName: public` в `ingress.yaml`: текущий внешний ingress class этого GitOps repo. Если нужен Traefik или другой nginx class, поменяйте здесь и в `networkpolicy.yaml`.
 - `letsencrypt-prod`: имя существующего `ClusterIssuer`. Email Let's Encrypt меняется в манифесте самого issuer, если вы создаете новый issuer отдельно.
 - PVC сейчас используют default storage class. Если нужен конкретный `storageClassName`, добавьте его в `pvc.yaml` и `backup-cronjob.yaml`.
@@ -100,10 +100,10 @@ kubectl -n obsidian-sync get certificate,secret
 Проверка HTTPS и health:
 
 ```powershell
-curl.exe -i https://notes.example.com/_up
-curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.example.com/
-curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.example.com/_all_dbs
-curl.exe -u "$env:OBSIDIAN_USER`:$env:OBSIDIAN_PASSWORD" https://notes.example.com/obsidian
+curl.exe -i https://notes.devflux.ru/_up
+curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.devflux.ru/
+curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.devflux.ru/_all_dbs
+curl.exe -u "$env:OBSIDIAN_USER`:$env:OBSIDIAN_PASSWORD" https://notes.devflux.ru/obsidian
 ```
 
 Проверка, что сервиса нет через `NodePort`:
@@ -119,7 +119,7 @@ kubectl -n obsidian-sync get svc couchdb -o jsonpath="{.spec.type}"
 1. В Obsidian откройте нужный vault.
 2. Включите Community plugins и установите `Self-hosted LiveSync`.
 3. В настройках плагина выберите self-hosted CouchDB.
-4. Server URI: `https://notes.example.com`.
+4. Server URI: `https://notes.devflux.ru`.
 5. Database name: `obsidian`.
 6. Username: значение `OBSIDIAN_USER`, по умолчанию `obsidian_sync`.
 7. Password: значение `OBSIDIAN_PASSWORD`.
@@ -132,7 +132,7 @@ kubectl -n obsidian-sync get svc couchdb -o jsonpath="{.spec.type}"
 1. Установите Obsidian и откройте тот же vault или создайте пустой vault.
 2. Установите `Self-hosted LiveSync` из Community plugins.
 3. Проще всего импортировать setup URI, который создан на первом устройстве.
-4. Если настраиваете вручную: Server URI `https://notes.example.com`, database `obsidian`, username/password как у пользователя `obsidian_sync`.
+4. Если настраиваете вручную: Server URI `https://notes.devflux.ru`, database `obsidian`, username/password как у пользователя `obsidian_sync`.
 5. Если включали E2E encryption, введите тот же passphrase LiveSync.
 6. Дождитесь полной первой синхронизации до редактирования одних и тех же заметок на нескольких устройствах.
 
@@ -154,14 +154,14 @@ Read-only changes feed:
 
 ```powershell
 $pair = "$env:AI_READER_USER`:$env:AI_READER_PASSWORD"
-curl.exe -u $pair "https://notes.example.com/obsidian/_changes?feed=longpoll&include_docs=true&since=now&timeout=60000"
+curl.exe -u $pair "https://notes.devflux.ru/obsidian/_changes?feed=longpoll&include_docs=true&since=now&timeout=60000"
 ```
 
 Continuous feed:
 
 ```bash
 curl -N -u "$AI_READER_USER:$AI_READER_PASSWORD" \
-  "https://notes.example.com/obsidian/_changes?feed=continuous&include_docs=true&heartbeat=10000&since=now"
+  "https://notes.devflux.ru/obsidian/_changes?feed=continuous&include_docs=true&heartbeat=10000&since=now"
 ```
 
 Python read example:
@@ -169,7 +169,7 @@ Python read example:
 ```python
 import requests
 
-base = "https://notes.example.com"
+base = "https://notes.devflux.ru"
 auth = ("ai_reader", "<AI_READER_PASSWORD>")
 params = {"feed": "longpoll", "include_docs": "true", "since": "now", "timeout": 60000}
 response = requests.get(f"{base}/obsidian/_changes", auth=auth, params=params, timeout=70)
@@ -183,7 +183,7 @@ Write example for a controlled service:
 ```bash
 curl -u "$AI_WRITER_USER:$AI_WRITER_PASSWORD" \
   -H "Content-Type: application/json" \
-  -X PUT "https://notes.example.com/obsidian/agent-note-001" \
+  -X PUT "https://notes.devflux.ru/obsidian/agent-note-001" \
   --data '{"type":"agent-note","text":"Created through CouchDB API"}'
 ```
 
@@ -306,7 +306,7 @@ kubectl -n obsidian-sync logs job/couchdb-restore-manual
 kubectl -n argocd get app obsidian-sync
 kubectl -n obsidian-sync rollout status statefulset/couchdb
 kubectl -n obsidian-sync exec statefulset/couchdb -- du -sh /opt/couchdb/data
-curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.example.com/_up
+curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.devflux.ru/_up
 ```
 
 Не удаляйте `PVC couchdb-data`. Удаление pod или rollout StatefulSet не удаляет данные, пока PVC остается на месте.
@@ -315,7 +315,7 @@ curl.exe -u "$env:COUCHDB_USER`:$env:COUCHDB_PASSWORD" https://notes.example.com
 
 - Не публикуйте CouchDB через `NodePort` или `LoadBalancer`; только `Ingress` + HTTPS.
 - Не используйте admin credentials в Obsidian и AI-агентах.
-- Ограничьте доступ к `notes.example.com` по IP на уровне ingress/WAF, если сервис не должен быть публичным.
+- Ограничьте доступ к `notes.devflux.ru` по IP на уровне ingress/WAF, если сервис не должен быть публичным.
 - Реальные секреты держите в Vault/ESO, SOPS или SealedSecrets.
 - Включите NetworkPolicy enforcement в CNI. Без Calico/Cilium/аналогов `NetworkPolicy` не работает.
 - Добавьте отдельную базу на каждый vault, если права доступа должны различаться.
@@ -351,7 +351,7 @@ kubectl describe clusterissuer letsencrypt-prod
 kubectl -n obsidian-sync describe ingress couchdb
 ```
 
-Проверьте DNS `notes.example.com`, ingress class и доступность HTTP-01 challenge снаружи.
+Проверьте DNS `notes.devflux.ru`, ingress class и доступность HTTP-01 challenge снаружи.
 
 Ingress дает 502/504:
 
@@ -367,7 +367,7 @@ Obsidian пишет CORS error:
 
 ```powershell
 kubectl -n obsidian-sync exec statefulset/couchdb -- cat /opt/couchdb/etc/local.d/obsidian.ini
-curl.exe -i -X OPTIONS https://notes.example.com/obsidian `
+curl.exe -i -X OPTIONS https://notes.devflux.ru/obsidian `
   -H "Origin: app://obsidian.md" `
   -H "Access-Control-Request-Method: GET"
 ```
