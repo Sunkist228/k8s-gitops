@@ -22,7 +22,7 @@ spec:
               kubernetes.io/metadata.name: ingress
           podSelector:
             matchLabels:
-              microk8s-application: nginx-ingress-microk8s
+              name: nginx-ingress-microk8s
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
