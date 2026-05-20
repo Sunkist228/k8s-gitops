@@ -147,6 +147,10 @@ kind: Job
 metadata:
   name: couchdb-init
   namespace: obsidian-sync
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "5"
   labels:
     app: obsidian-sync
     environment: prod
