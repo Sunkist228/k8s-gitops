@@ -431,6 +431,29 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  name: obsidian-sync
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Sunkist228/k8s-gitops.git
+    targetRevision: HEAD
+    path: apps/obsidian-sync
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: obsidian-sync
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
   name: jenkins-notify
   namespace: argocd
   finalizers:

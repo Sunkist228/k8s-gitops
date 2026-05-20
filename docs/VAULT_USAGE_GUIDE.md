@@ -157,7 +157,9 @@ Important rules:
    - `vault kv put secret/devops-tools/ingress-manager API_KEY="<API_KEY>" DATABASE_URL="<DATABASE_URL>"`
 7. CouchDB:
    - `vault kv put secret/databases/couchdb COUCHDB_USER="<COUCHDB_USER>" COUCHDB_PASSWORD="<COUCHDB_PASSWORD>"`
-8. OpenClaw VPN subscription:
+8. Obsidian Sync CouchDB:
+   - `vault kv put secret/databases/obsidian-sync COUCHDB_USER="admin" COUCHDB_PASSWORD="<ADMIN_PASSWORD>" COUCHDB_SECRET="<COOKIE_SECRET>" OBSIDIAN_DB="obsidian" OBSIDIAN_USER="obsidian_sync" OBSIDIAN_PASSWORD="<OBSIDIAN_PASSWORD>" AI_READER_USER="ai_reader" AI_READER_PASSWORD="<AI_READER_PASSWORD>" AI_WRITER_USER="ai_writer" AI_WRITER_PASSWORD="<AI_WRITER_PASSWORD>"`
+9. OpenClaw VPN subscription:
    - `vault kv put secret/openclaw/proxy subscription_url="<SUBSCRIPTION_URL>"`
 
 ### Verify a secret
