@@ -21,6 +21,7 @@ data:
     bind_address = 0.0.0.0
     port = 5984
     require_valid_user = true
+    require_valid_user_except_for_up = true
     enable_cors = true
     max_http_request_size = 4294967296
 
