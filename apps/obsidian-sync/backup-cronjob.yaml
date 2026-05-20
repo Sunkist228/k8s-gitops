@@ -1,0 +1,250 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: couchdb-backups
+  namespace: obsidian-sync
+  labels:
+    app: obsidian-sync
+    environment: prod
+    component: backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: couchdb-backup-scripts
+  namespace: obsidian-sync
+  labels:
+    app: obsidian-sync
+    environment: prod
+    component: backup
+data:
+  backup.py: |
+    import base64
+    import json
+    import os
+    import shutil
+    import tarfile
+    import tempfile
+    import time
+    import urllib.parse
+    import urllib.request
+    from pathlib import Path
+
+    url = os.environ.get("COUCHDB_URL", "http://couchdb:5984").rstrip("/")
+    user = os.environ["COUCHDB_USER"]
+    password = os.environ["COUCHDB_PASSWORD"]
+    backup_dir = Path(os.environ.get("BACKUP_DIR", "/backups"))
+    retention_days = int(os.environ.get("BACKUP_RETENTION_DAYS", "14"))
+    explicit_dbs = [db.strip() for db in os.environ.get("BACKUP_DATABASES", "").split(",") if db.strip()]
+    token = base64.b64encode(f"{user}:{password}".encode()).decode()
+
+    def request(path):
+        req = urllib.request.Request(
+            f"{url}{path}",
+            headers={"Authorization": f"Basic {token}", "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=300) as res:
+            return res.read()
+
+    def db_path(db_name):
+        return "/" + urllib.parse.quote(db_name, safe="")
+
+    timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    workdir = Path(tempfile.mkdtemp(prefix=f"couchdb-{timestamp}-", dir="/tmp"))
+    try:
+        server_info = request("/")
+        (workdir / "server.json").write_bytes(server_info)
+        dbs = explicit_dbs or json.loads(request("/_all_dbs").decode())
+        (workdir / "databases.json").write_text(json.dumps(dbs, indent=2), encoding="utf-8")
+
+        for db in dbs:
+            safe_name = urllib.parse.quote(db, safe="")
+            db_dir = workdir / "dbs" / safe_name
+            db_dir.mkdir(parents=True, exist_ok=True)
+            (db_dir / "name.txt").write_text(db, encoding="utf-8")
+            (db_dir / "metadata.json").write_bytes(request(db_path(db)))
+            all_docs_path = f"{db_path(db)}/_all_docs?include_docs=true&attachments=true&att_encoding_info=true&conflicts=true"
+            (db_dir / "all_docs.json").write_bytes(request(all_docs_path))
+            try:
+                (db_dir / "security.json").write_bytes(request(f"{db_path(db)}/_security"))
+            except Exception as exc:
+                (db_dir / "security.error.txt").write_text(str(exc), encoding="utf-8")
+
+        archive = backup_dir / f"couchdb-{timestamp}.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            tar.add(workdir, arcname=f"couchdb-{timestamp}")
+        print(f"Created {archive}")
+
+        cutoff = time.time() - retention_days * 86400
+        for old in backup_dir.glob("couchdb-*.tar.gz"):
+            if old.stat().st_mtime < cutoff:
+                old.unlink()
+                print(f"Deleted old backup {old}")
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+  restore.py: |
+    import base64
+    import json
+    import os
+    import shutil
+    import sys
+    import tarfile
+    import tempfile
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+    from pathlib import Path
+
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: restore.py /backups/couchdb-YYYYMMDDTHHMMSSZ.tar.gz")
+
+    url = os.environ.get("COUCHDB_URL", "http://couchdb:5984").rstrip("/")
+    user = os.environ["COUCHDB_USER"]
+    password = os.environ["COUCHDB_PASSWORD"]
+    token = base64.b64encode(f"{user}:{password}".encode()).decode()
+    archive_path = Path(sys.argv[1])
+
+    def request(method, path, body=None, ok=(200, 201, 202, 304, 409)):
+        headers = {"Authorization": f"Basic {token}", "Accept": "application/json"}
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode()
+            headers["Content-Type"] = "application/json"
+        req = urllib.request.Request(f"{url}{path}", data=data, method=method, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=300) as res:
+                raw = res.read()
+                return res.status, json.loads(raw.decode()) if raw else {}
+        except urllib.error.HTTPError as exc:
+            raw = exc.read().decode() if exc.fp else ""
+            if exc.code in ok:
+                return exc.code, json.loads(raw) if raw else {}
+            raise RuntimeError(f"{method} {path} failed with HTTP {exc.code}: {raw}") from exc
+
+    def db_path(db_name):
+        return "/" + urllib.parse.quote(db_name, safe="")
+
+    workdir = Path(tempfile.mkdtemp(prefix="couchdb-restore-", dir="/tmp"))
+    try:
+        with tarfile.open(archive_path, "r:gz") as tar:
+            tar.extractall(workdir)
+        root = next(workdir.iterdir())
+        for db_dir in sorted((root / "dbs").iterdir()):
+            db = (db_dir / "name.txt").read_text(encoding="utf-8")
+            print(f"Restoring {db}")
+            request("PUT", db_path(db), ok=(201, 202, 409))
+            rows = json.loads((db_dir / "all_docs.json").read_text(encoding="utf-8")).get("rows", [])
+            docs = [row["doc"] for row in rows if row.get("doc")]
+            for index in range(0, len(docs), 500):
+                request("POST", f"{db_path(db)}/_bulk_docs", {"new_edits": False, "docs": docs[index:index + 500]}, ok=(200, 201, 202))
+            security_file = db_dir / "security.json"
+            if security_file.exists():
+                request("PUT", f"{db_path(db)}/_security", json.loads(security_file.read_text(encoding="utf-8")), ok=(200, 201, 202))
+        print("Restore completed")
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: couchdb-backup
+  namespace: obsidian-sync
+  labels:
+    app: obsidian-sync
+    environment: prod
+    component: backup
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: obsidian-sync
+            environment: prod
+            component: backup
+            obsidian-sync-access: "true"
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            fsGroup: 65532
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup
+              image: docker.io/python:3.12-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - python
+                - /scripts/backup.py
+              env:
+                - name: COUCHDB_URL
+                  value: http://couchdb:5984
+                - name: COUCHDB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: couchdb-credentials
+                      key: COUCHDB_USER
+                - name: COUCHDB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: couchdb-credentials
+                      key: COUCHDB_PASSWORD
+                - name: BACKUP_DIR
+                  value: /backups
+                - name: BACKUP_RETENTION_DAYS
+                  value: "14"
+                - name: PYTHONUNBUFFERED
+                  value: "1"
+                - name: TMPDIR
+                  value: /tmp
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: backups
+                  mountPath: /backups
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 65532
+                runAsGroup: 65532
+                capabilities:
+                  drop:
+                    - ALL
+          volumes:
+            - name: scripts
+              configMap:
+                name: couchdb-backup-scripts
+                defaultMode: 0555
+            - name: backups
+              persistentVolumeClaim:
+                claimName: couchdb-backups
+            - name: tmp
+              emptyDir: {}

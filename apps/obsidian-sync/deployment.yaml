@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: couchdb
+  namespace: obsidian-sync
+  labels:
+    app: obsidian-sync
+    environment: prod
+    component: couchdb
+spec:
+  serviceName: couchdb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: obsidian-sync
+      environment: prod
+      component: couchdb
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: obsidian-sync
+        environment: prod
+        component: couchdb
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 5984
+        runAsGroup: 5984
+        fsGroup: 5984
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: validate-secrets
+          image: docker.io/busybox:1.36.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              for key in COUCHDB_USER COUCHDB_PASSWORD COUCHDB_SECRET OBSIDIAN_USER OBSIDIAN_PASSWORD AI_READER_USER AI_READER_PASSWORD AI_WRITER_USER AI_WRITER_PASSWORD; do
+                eval value="\${$key}"
+                case "$value" in
+                  ""|"\${"*|REPLACE*|CHANGE_ME*)
+                    echo "Secret value $key is not configured" >&2
+                    exit 1
+                    ;;
+                esac
+              done
+              for key in COUCHDB_PASSWORD COUCHDB_SECRET OBSIDIAN_PASSWORD AI_READER_PASSWORD AI_WRITER_PASSWORD; do
+                eval value="\${$key}"
+                if [ "${#value}" -lt 20 ]; then
+                  echo "Secret value $key must be at least 20 characters" >&2
+                  exit 1
+                fi
+              done
+          envFrom:
+            - secretRef:
+                name: couchdb-credentials
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            capabilities:
+              drop:
+                - ALL
+      containers:
+        - name: couchdb
+          image: docker.io/apache/couchdb:3.5.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5984
+              protocol: TCP
+          env:
+            - name: COUCHDB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: COUCHDB_USER
+            - name: COUCHDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: COUCHDB_PASSWORD
+            - name: COUCHDB_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: COUCHDB_SECRET
+            - name: NODENAME
+              value: "127.0.0.1"
+          volumeMounts:
+            - name: couchdb-data
+              mountPath: /opt/couchdb/data
+            - name: couchdb-config
+              mountPath: /opt/couchdb/etc/local.d/obsidian.ini
+              subPath: obsidian.ini
+              readOnly: true
+          startupProbe:
+            httpGet:
+              path: /_up
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /_up
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /_up
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 5984
+            runAsGroup: 5984
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: couchdb-data
+          persistentVolumeClaim:
+            claimName: couchdb-data
+        - name: couchdb-config
+          configMap:
+            name: couchdb-config
+            items:
+              - key: obsidian.ini
+                path: obsidian.ini
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: couchdb
+  namespace: obsidian-sync
+  labels:
+    app: obsidian-sync
+    environment: prod
+    component: couchdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: obsidian-sync
+      environment: prod
+      component: couchdb

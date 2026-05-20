@@ -1,0 +1,50 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: couchdb-ingress-only
+  namespace: obsidian-sync
+  labels:
+    app: obsidian-sync
+    environment: prod
+    component: couchdb
+spec:
+  podSelector:
+    matchLabels:
+      app: obsidian-sync
+      environment: prod
+      component: couchdb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress
+          podSelector:
+            matchLabels:
+              microk8s-application: nginx-ingress-microk8s
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: obsidian-sync
+          podSelector:
+            matchLabels:
+              obsidian-sync-access: "true"
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              obsidian-sync-access: "true"
+      ports:
+        - protocol: TCP
+          port: 5984
