@@ -87,8 +87,8 @@ data:
         return "/" + urllib.parse.quote(db_name, safe="")
 
     for db in ["_users", "_replicator", "_global_changes", obsidian_db]:
-        status, payload = request("PUT", db_path(db), ok=(201, 202, 409))
-        if status == 409:
+        status, payload = request("PUT", db_path(db), ok=(201, 202, 409, 412))
+        if status in (409, 412):
             print(f"Database {db} already exists", flush=True)
         else:
             print(f"Database {db} created", flush=True)
