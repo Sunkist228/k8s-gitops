@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kv-group
+  labels:
+    app.kubernetes.io/name: kv-group
+    app.kubernetes.io/part-of: kv-group

@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kv-group
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - api.yaml
+  - web.yaml
+  - mail.yaml
+  - ingress.yaml
+  - ingress-kvteam.yaml
+
+images:
+  - name: harbor.devflux.ru/kv-group/api
+    newTag: manual-392095514016
+  - name: harbor.devflux.ru/kv-group/web
+    newTag: manual-392095514016
