@@ -18,6 +18,10 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -36,11 +40,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: home-assistant
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -69,6 +73,9 @@ spec:
     syncOptions:
     - CreateNamespace=true
     - ServerSideApply=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -94,6 +101,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -117,6 +127,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -145,6 +158,9 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -176,6 +192,9 @@ spec:
     syncOptions:
     - CreateNamespace=true
     - ServerSideApply=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -197,6 +216,10 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -215,11 +238,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: n8n
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -243,6 +266,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -266,6 +292,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -284,11 +313,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: demo
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -307,11 +336,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devops-tools
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -330,11 +359,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: playerok-dev
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -353,11 +382,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: playerok-pre-dev
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -376,11 +405,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devflux-dev
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -404,6 +433,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -422,11 +454,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devflux
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -445,11 +477,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: obsidian-sync
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -468,11 +500,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devops-tools
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -491,11 +523,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: kv-group
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -514,11 +546,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: openclaw
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -537,8 +569,8 @@ spec:
     server: https://kubernetes.default.svc
     namespace: omnirouter
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - FailOnSharedResource=true

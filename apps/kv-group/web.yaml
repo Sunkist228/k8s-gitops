@@ -21,7 +21,14 @@ metadata:
     app.kubernetes.io/name: kv-group-web
     app.kubernetes.io/part-of: kv-group
 spec:
-  replicas: 1
+  replicas: 2
+  minReadySeconds: 15
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: kv-group-web
@@ -47,15 +54,26 @@ spec:
               value: ""
             - name: API_INTERNAL_URL
               value: http://kv-group-api:8000
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 2
           readinessProbe:
             httpGet:
               path: /
               port: 3000
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /
               port: 3000
             initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3

@@ -44,6 +44,7 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
 - Kubernetes app changes are made only via commits in this repository and applied by ArgoCD sync.
 - Manual mutable operations (`kubectl apply/edit` for app changes) are out of flow and should be avoided.
 - New applications must be added in both `apps/<name>/` and `bootstrap/apps/apps.yaml`.
+- Deployment safety rules live in `docs/ARGOCD_DEPLOYMENT_SAFETY.md`.
 
 ## Refactoring Notes
 
