@@ -9,6 +9,7 @@ resources:
   - api.yaml
   - web.yaml
   - mail.yaml
+  - pdb.yaml
   - ingress.yaml
   - ingress-kvteam.yaml
 

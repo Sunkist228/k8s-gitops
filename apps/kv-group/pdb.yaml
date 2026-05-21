@@ -1,0 +1,38 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kv-group-web
+  labels:
+    app.kubernetes.io/name: kv-group-web
+    app.kubernetes.io/part-of: kv-group
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kv-group-web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kv-group-api
+  labels:
+    app.kubernetes.io/name: kv-group-api
+    app.kubernetes.io/part-of: kv-group
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kv-group-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kv-group-mail-web-proxy
+  labels:
+    app.kubernetes.io/name: kv-group-mail-web-proxy
+    app.kubernetes.io/part-of: kv-group
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kv-group-mail-web-proxy

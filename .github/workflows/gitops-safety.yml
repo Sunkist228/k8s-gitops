@@ -1,0 +1,32 @@
+name: GitOps safety
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "bootstrap/**"
+      - "scripts/validate_gitops_safety.py"
+      - ".github/workflows/gitops-safety.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/**"
+      - "bootstrap/**"
+      - "scripts/validate_gitops_safety.py"
+      - ".github/workflows/gitops-safety.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml
+
+      - name: Check Argo CD safety rules
+        run: python scripts/validate_gitops_safety.py
