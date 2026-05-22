@@ -14,5 +14,7 @@ data:
   DB_CONNECT_RETRIES: "10"
   DB_CONNECT_DELAY_SECONDS: "2"
   ENVIRONMENT: "dev"
+  FRONTEND_URL: "https://playerok-devflux.dev.devflux.ru"
+  BACKEND_PUBLIC_URL: "https://playerok-devflux.dev.devflux.ru"
   METRICS_ENABLED: "true"
   METRICS_PATH: "/metrics"
