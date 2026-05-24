@@ -382,6 +382,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: playerok-pre-dev
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
     syncOptions:
     - CreateNamespace=true
     - PruneLast=true
