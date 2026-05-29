@@ -36,6 +36,28 @@ REQUIRED_KV_GROUP_PDBS = {
     "kv-group-mail-web-proxy",
 }
 
+MAX_EXTERNAL_SECRET_REFRESH_SECONDS = 300
+
+
+def parse_duration_seconds(value: str) -> int | None:
+    if not value:
+        return None
+
+    unit = value[-1]
+    amount = value[:-1]
+    if not amount.isdigit():
+        return None
+
+    multipliers = {
+        "s": 1,
+        "m": 60,
+        "h": 60 * 60,
+    }
+    multiplier = multipliers.get(unit)
+    if multiplier is None:
+        return None
+    return int(amount) * multiplier
+
 
 def load_all(path: Path) -> list[dict[str, Any]]:
     with path.open("r", encoding="utf-8") as handle:
@@ -139,8 +161,42 @@ def assert_kv_group_rollout_safety() -> list[str]:
     return errors
 
 
+def assert_external_secret_recovery_safety() -> list[str]:
+    errors: list[str] = []
+
+    for path in sorted((ROOT / "apps").rglob("*.yaml")):
+        relative_path = path.relative_to(ROOT)
+        if "charts" in relative_path.parts or "templates" in relative_path.parts:
+            continue
+
+        for doc in load_all(path):
+            if doc.get("kind") != "ExternalSecret":
+                continue
+
+            refresh_interval = str(doc.get("spec", {}).get("refreshInterval", ""))
+            seconds = parse_duration_seconds(refresh_interval)
+            name = doc.get("metadata", {}).get("name", "<unnamed>")
+
+            if seconds is None:
+                errors.append(
+                    f"{relative_path} ExternalSecret/{name}: refreshInterval must use s/m/h duration"
+                )
+                continue
+
+            if seconds > MAX_EXTERNAL_SECRET_REFRESH_SECONDS:
+                errors.append(
+                    f"{relative_path} ExternalSecret/{name}: refreshInterval must be <= 5m"
+                )
+
+    return errors
+
+
 def main() -> int:
-    errors = assert_application_safety() + assert_kv_group_rollout_safety()
+    errors = (
+        assert_application_safety()
+        + assert_kv_group_rollout_safety()
+        + assert_external_secret_recovery_safety()
+    )
     if errors:
         for error in errors:
             print(f"ERROR: {error}")
