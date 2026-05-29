@@ -156,7 +156,7 @@ enableHTTP2: false
 
 # -- Specifies the number of concurrent ExternalSecret Reconciles external-secret executes at
 # a time.
-concurrent: 1
+concurrent: 8
 # -- Specifies Log Params to the External Secrets Operator
 log:
   level: info

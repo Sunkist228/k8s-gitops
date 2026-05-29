@@ -177,6 +177,8 @@ Check status:
 1. `kubectl get clustersecretstore vault-backend -o yaml`
 2. `kubectl get externalsecret -A`
 
+GitOps-managed `ExternalSecret` resources use `refreshInterval: 2m`, and the ESO controller is configured with `concurrent: 8`. After Vault becomes available again, secrets should normally reconcile within a few minutes instead of waiting for the old one-hour interval.
+
 Force immediate reconcile:
 1. `kubectl -n <ns> annotate externalsecret <name> force-sync="$(date -Iseconds)" --overwrite`
 
