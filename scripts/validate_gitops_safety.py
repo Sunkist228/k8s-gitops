@@ -24,6 +24,11 @@ WORKLOAD_APPS = {
     "omnirouter",
 }
 
+AUTOMATED_WORKLOAD_APPS = {
+    "playerok-dev",
+    "playerok-pre-dev",
+}
+
 REQUIRED_SYNC_OPTIONS = {
     "PruneLast=true",
     "ApplyOutOfSyncOnly=true",
@@ -97,7 +102,16 @@ def assert_application_safety() -> list[str]:
         if missing_options:
             errors.append(f"{name}: missing syncOptions: {', '.join(missing_options)}")
 
-        if name in WORKLOAD_APPS and "automated" in sync_policy:
+        if name in AUTOMATED_WORKLOAD_APPS:
+            automated = sync_policy.get("automated")
+            if not isinstance(automated, dict):
+                errors.append(f"{name}: automated sync is required")
+            else:
+                if automated.get("prune") is not True:
+                    errors.append(f"{name}: automated.prune must be true")
+                if automated.get("selfHeal") is not True:
+                    errors.append(f"{name}: automated.selfHeal must be true")
+        elif name in WORKLOAD_APPS and "automated" in sync_policy:
             errors.append(f"{name}: workload apps must use manual sync, not automated sync")
 
     return errors

@@ -359,6 +359,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: playerok-dev
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
     - CreateNamespace=true
     - PruneLast=true
@@ -382,6 +385,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: playerok-pre-dev
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
     - CreateNamespace=true
     - PruneLast=true
