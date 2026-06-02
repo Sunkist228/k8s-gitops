@@ -11,6 +11,8 @@ data:
   RUN_DB_MIGRATIONS: "true"
   S3_ARTIFACT_BUCKET: "devflux-artifacts"
   S3_REGION: "us-east-1"
+  S3_PUBLIC_ENDPOINT_URL: "https://minio.s3.devflux.ru"
+  S3_PRESIGNED_DOWNLOAD_TTL_SECONDS: "600"
   PUBLIC_BASE_URL: "https://artifacts.devflux.ru"
   MAX_UPLOAD_SIZE_BYTES: "524288000"
   METRICS_ENABLED: "true"
