@@ -10,6 +10,8 @@ data:
   AUTO_CREATE_TABLES: "true"
   S3_ARTIFACT_BUCKET: "playerok-artifacts"
   S3_REGION: "us-east-1"
+  S3_PUBLIC_ENDPOINT_URL: "https://minio.s3.devflux.ru"
+  S3_PRESIGNED_DOWNLOAD_TTL_SECONDS: "600"
   PUBLIC_BASE_URL: "https://playerok-devflux.dev.devflux.ru/api/artifacts"
   REDIS_URL: "redis://redis.playerok-dev.svc.cluster.local:6379/0"
   REDIS_ENABLED: "true"
