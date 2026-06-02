@@ -14,6 +14,8 @@ spec:
       environment: dev
   template:
     metadata:
+      annotations:
+        artifact-server.devflux.ru/config-revision: "2026-06-03-public-s3-endpoint"
       labels:
         app: artifact-server
         component: artifacts
