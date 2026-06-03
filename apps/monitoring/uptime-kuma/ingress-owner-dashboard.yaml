@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: uptime-kuma-owner-dashboard
+  namespace: monitoring
+  labels:
+    app: uptime-kuma
+    environment: monitoring
+    component: owner-dashboard
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/auth-realm: Playerok owner uptime dashboard
+    nginx.ingress.kubernetes.io/auth-secret: uptime-kuma-owner-basic-auth
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: public
+  rules:
+    - host: owner-dashboard.playerok-devflux.dev.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: uptime-kuma
+                port:
+                  number: 3001
+  tls:
+    - secretName: uptime-kuma-owner-dashboard-tls
+      hosts:
+        - owner-dashboard.playerok-devflux.dev.devflux.ru
