@@ -1,36 +1,37 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: backend
+  name: backend-migrations
   labels:
     app: backend
     environment: dev
-    component: api
+    component: migrations
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: backend
-      environment: dev
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
         app: backend
         environment: dev
-        component: api
+        component: migrations
     spec:
+      restartPolicy: Never
       imagePullSecrets:
         - name: harbor-registry
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-        - name: backend
+        - name: backend-migrations
           image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.14.2-dev.245-sha.121fa3863e40
           imagePullPolicy: Always
-          ports:
-            - name: http
-              containerPort: 8000
+          command: ["/opt/venv/bin/alembic"]
+          args: ["upgrade", "head"]
           envFrom:
             - configMapRef:
                 name: backend-config
@@ -43,15 +44,3 @@ spec:
             limits:
               memory: 512Mi
               cpu: 500m
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 45
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 35
-            periodSeconds: 5
