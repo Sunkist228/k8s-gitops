@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: uptime-kuma-client-metrics
+  namespace: monitoring
+  labels:
+    app: uptime-kuma
+    environment: monitoring
+    component: client-status-page
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: public
+  rules:
+    - host: client-metrics.playerok-devflux.dev.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: uptime-kuma
+                port:
+                  number: 3001
+  tls:
+    - secretName: uptime-kuma-client-metrics-tls
+      hosts:
+        - client-metrics.playerok-devflux.dev.devflux.ru
