@@ -16,3 +16,4 @@ resources:
   - dashboards/playerok-dev-dashboard-cm.yaml
   - dashboards/k8s-cluster-overview-dashboard-cm.yaml
   - dashboards/k8s-namespace-workloads-dashboard-cm.yaml
+  - uptime-kuma
