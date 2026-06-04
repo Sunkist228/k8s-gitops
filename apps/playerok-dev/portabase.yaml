@@ -1,0 +1,338 @@
+# Dev contour: Portabase dashboard and in-cluster agent.
+# Requires namespace `playerok-dev` secrets:
+# - `portabase-app-secret`: PROJECT_SECRET, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+# - `portabase-credentials`: PGADMIN_DEFAULT_EMAIL, PGADMIN_DEFAULT_PASSWORD
+#   (legacy names from the temporary pgAdmin deployment, mapped to Portabase bootstrap admin)
+# - `database-backup-credentials`: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD
+# - `portabase-agent-credentials`: EDGE_KEY generated after the dashboard agent record exists
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: portabase-data
+  namespace: playerok-dev
+  labels:
+    app: portabase
+    environment: dev
+    component: dashboard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: portabase-agent-data
+  namespace: playerok-dev
+  labels:
+    app: portabase-agent
+    environment: dev
+    component: database-backup-agent
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portabase-agent-config-renderer
+  namespace: playerok-dev
+  labels:
+    app: portabase-agent
+    environment: dev
+    component: database-backup-agent
+data:
+  render-agent-config.py: |
+    import json
+    import os
+
+    password = os.environ["POSTGRES_PASSWORD"]
+    host = os.environ.get("POSTGRES_HOST", "postgres-service.databases.svc.cluster.local")
+    port = int(os.environ.get("POSTGRES_PORT", "5432"))
+    username = os.environ.get("POSTGRES_USER", "playerok")
+
+    databases = [
+        ("Playerok Dev PostgreSQL", "playerok_dev", "3c0547c5-60fc-4eb0-9f19-d81045255743"),
+        ("Playerok Preprod PostgreSQL", "playerok_preprod", "59ab24e5-a6e3-4757-9381-23bc07d4d856"),
+        ("Playerok Prod PostgreSQL", "playerok_prod", "7d2693c6-0f1f-4c5d-a6fd-c6f00f905db0"),
+    ]
+
+    payload = {
+        "databases": [
+            {
+                "name": name,
+                "database": database,
+                "type": "postgresql",
+                "host": host,
+                "port": port,
+                "username": username,
+                "password": password,
+                "generated_id": generated_id,
+            }
+            for name, database, generated_id in databases
+        ]
+    }
+
+    os.makedirs("/config", exist_ok=True)
+    with open("/config/config.json", "w", encoding="utf-8") as config_file:
+        json.dump(payload, config_file, separators=(",", ":"))
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portabase
+  namespace: playerok-dev
+  labels:
+    app: portabase
+    environment: dev
+    component: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portabase
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: portabase
+        environment: dev
+        component: dashboard
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      containers:
+        - name: portabase
+          image: portabase/portabase:latest
+          imagePullPolicy: Always
+          env:
+            - name: TZ
+              value: Europe/Moscow
+            - name: PROJECT_URL
+              value: https://portabase.devflux.ru
+            - name: TRUSTED_DOMAINS
+              value: https://portabase.devflux.ru
+            - name: AUTH_EMAIL_PASSWORD_ENABLED
+              value: "true"
+            - name: AUTH_SIGNUP_ENABLED
+              value: "false"
+            - name: AUTH_PASSKEY_ENABLED
+              value: "false"
+            - name: PROJECT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-app-secret
+                  key: PROJECT_SECRET
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-app-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-app-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-app-secret
+                  key: POSTGRES_DB
+            - name: AUTH_DEFAULT_USER_NAME
+              value: Playerok Admin
+            - name: AUTH_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-credentials
+                  key: PGADMIN_DEFAULT_EMAIL
+            - name: AUTH_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-credentials
+                  key: PGADMIN_DEFAULT_PASSWORD
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: portabase-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: portabase
+  namespace: playerok-dev
+  labels:
+    app: portabase
+    environment: dev
+    component: dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: portabase
+    environment: dev
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portabase-agent
+  namespace: playerok-dev
+  labels:
+    app: portabase-agent
+    environment: dev
+    component: database-backup-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portabase-agent
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: portabase-agent
+        environment: dev
+        component: database-backup-agent
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: portabase-agent-data
+        - name: config-renderer
+          configMap:
+            name: portabase-agent-config-renderer
+      initContainers:
+        - name: render-config
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - /scripts/render-agent-config.py
+          envFrom:
+            - secretRef:
+                name: database-backup-credentials
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: config-renderer
+              mountPath: /scripts
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      containers:
+        - name: portabase-agent
+          image: portabase/agent:latest
+          imagePullPolicy: Always
+          env:
+            - name: TZ
+              value: Europe/Moscow
+            - name: POLLING
+              value: "5"
+            - name: APP_ENV
+              value: production
+            - name: DATA_PATH
+              value: /data
+            - name: DATABASES_CONFIG_FILE
+              value: /config/config.json
+            - name: LOG
+              value: info
+            - name: EDGE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: portabase-agent-credentials
+                  key: EDGE_KEY
+          volumeMounts:
+            - name: config
+              mountPath: /data/config
+              readOnly: true
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portabase
+  namespace: playerok-dev
+  labels:
+    app: portabase
+    environment: dev
+    component: dashboard
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: portabase.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: portabase
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - portabase.devflux.ru
+      secretName: portabase-tls
