@@ -5,25 +5,42 @@ metadata:
   namespace: monitoring
   labels:
     release: kube-prometheus-stack
+    app: playerok
 spec:
   groups:
     - name: playerok.dev.rules
       rules:
         - alert: PlayerokBackendDown
-          expr: max by (namespace, service) (up{namespace="playerok-dev", service="backend"}) < 1
+          expr: |
+            absent(up{namespace="playerok-dev", service="backend"})
+              or
+            max by (namespace, service) (up{namespace="playerok-dev", service="backend"}) < 1
           for: 2m
           labels:
             severity: critical
             team: playerok
           annotations:
             summary: Playerok backend is down in playerok-dev
-            description: Prometheus target for service "backend" in namespace "playerok-dev" is not reachable for 2 minutes.
+            description: Prometheus cannot scrape the backend service in playerok-dev for 2 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokArtifactServerDown
+          expr: |
+            absent(up{namespace="playerok-dev", service="artifact-server"})
+              or
+            max by (namespace, service) (up{namespace="playerok-dev", service="artifact-server"}) < 1
+          for: 2m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok artifact-server is down in playerok-dev
+            description: Prometheus cannot scrape the artifact-server service in playerok-dev for 2 minutes.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
         - alert: PlayerokBackendHigh5xx
           expr: |
             sum(rate(http_requests_total{namespace="playerok-dev", service="backend", status=~"5.."}[5m]))
               /
-            clamp_min(sum(rate(http_requests_total{namespace="playerok-dev", service="backend"}[5m])), 0.1)
+            clamp_min(sum(rate(http_requests_total{namespace="playerok-dev", service="backend"}[5m])), 1)
               > 0.05
           for: 10m
           labels:
@@ -32,6 +49,20 @@ spec:
           annotations:
             summary: Playerok backend has high 5xx error ratio
             description: 5xx responses are above 5% for the backend service in playerok-dev for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokArtifactServerHigh5xx
+          expr: |
+            sum(rate(http_requests_total{namespace="playerok-dev", service="artifact-server", status=~"5.."}[5m]))
+              /
+            clamp_min(sum(rate(http_requests_total{namespace="playerok-dev", service="artifact-server"}[5m])), 1)
+              > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok artifact-server has high 5xx error ratio
+            description: 5xx responses are above 5% for the artifact-server service in playerok-dev for 10 minutes.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
         - alert: PlayerokBackendHighLatencyP95
           expr: |
@@ -49,6 +80,22 @@ spec:
             summary: Playerok backend p95 latency is high
             description: p95 latency for backend requests in playerok-dev is above 1 second for 10 minutes.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokArtifactServerHighLatencyP95
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{namespace="playerok-dev", service="artifact-server"}[5m])
+              )
+            ) > 2
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok artifact-server p95 latency is high
+            description: p95 latency for artifact-server requests in playerok-dev is above 2 seconds for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
         - alert: PlayerokFrontendDeploymentUnavailable
           expr: kube_deployment_status_replicas_unavailable{namespace="playerok-dev", deployment="frontend"} > 0
           for: 5m
@@ -58,4 +105,119 @@ spec:
           annotations:
             summary: Playerok frontend deployment has unavailable replicas
             description: Deployment "frontend" in namespace "playerok-dev" has unavailable replicas for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokBackendDeploymentUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace="playerok-dev", deployment="backend"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok backend deployment has unavailable replicas
+            description: Deployment "backend" in namespace "playerok-dev" has unavailable replicas for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokArtifactServerDeploymentUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace="playerok-dev", deployment="artifact-server"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok artifact-server deployment has unavailable replicas
+            description: Deployment "artifact-server" in namespace "playerok-dev" has unavailable replicas for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokPodCrashLooping
+          expr: |
+            max by (namespace, pod, container) (
+              kube_pod_container_status_waiting_reason{
+                namespace="playerok-dev",
+                pod=~"(frontend|backend|artifact-server).*",
+                reason="CrashLoopBackOff"
+              }
+            ) > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok pod is crash-looping
+            description: A Playerok pod container is in CrashLoopBackOff for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokPodRestartingFrequently
+          expr: |
+            sum by (namespace, pod, container) (
+              increase(kube_pod_container_status_restarts_total{
+                namespace="playerok-dev",
+                pod=~"(frontend|backend|artifact-server).*"
+              }[15m])
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok pod is restarting frequently
+            description: A Playerok pod container restarted more than twice in 15 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokHighMemoryUsage
+          expr: |
+            (
+              sum by (namespace, pod, container) (
+                container_memory_working_set_bytes{
+                  namespace="playerok-dev",
+                  pod=~"(frontend|backend|artifact-server).*",
+                  container!="",
+                  image!=""
+                }
+              )
+              /
+              clamp_min(
+                sum by (namespace, pod, container) (
+                  kube_pod_container_resource_limits{
+                    namespace="playerok-dev",
+                    pod=~"(frontend|backend|artifact-server).*",
+                    resource="memory",
+                    unit="byte"
+                  }
+                ),
+                1
+              )
+            ) > 0.90
+          for: 15m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok container memory usage is high
+            description: A Playerok container is using more than 90% of its memory limit for 15 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokArtifactStorageErrors
+          expr: |
+            sum by (operation) (
+              increase(artifact_storage_error_total{namespace="playerok-dev", service="artifact-server"}[10m])
+            ) > 0
+          for: 1m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok artifact storage operation failed
+            description: Artifact storage errors were recorded by artifact-server in playerok-dev.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokArtifactUploadFailures
+          expr: |
+            sum by (project, slug, platform, arch, result) (
+              increase(artifact_upload_total{
+                namespace="playerok-dev",
+                service="artifact-server",
+                result!="created"
+              }[15m])
+            ) > 0
+          for: 1m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok artifact upload failed
+            description: Artifact uploads are returning duplicate, storage_error, or error results in playerok-dev.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
