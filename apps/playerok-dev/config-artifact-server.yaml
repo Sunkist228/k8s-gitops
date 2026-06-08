@@ -14,7 +14,7 @@ data:
   S3_PRESIGNED_DOWNLOAD_TTL_SECONDS: "600"
   ARTIFACT_CDN_BASE_URLS: "https://picljwhuo7.cdn.twcstorage.ru"
   ARTIFACT_CDN_PROBE_TIMEOUT_SECONDS: "0.75"
-  PUBLIC_BASE_URL: "https://playerok-devflux.dev.devflux.ru/api/artifacts"
+  PUBLIC_BASE_URL: "https://artifacts.dev.devflux.ru"
   REDIS_URL: "redis://redis.playerok-dev.svc.cluster.local:6379/0"
   REDIS_ENABLED: "true"
   MAX_UPLOAD_SIZE_BYTES: "524288000"
