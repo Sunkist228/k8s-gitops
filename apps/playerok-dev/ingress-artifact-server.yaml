@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: artifact-server
+  labels:
+    app: artifact-server
+    environment: dev
+    component: artifacts
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: artifacts.dev.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: artifact-server
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - artifacts.dev.devflux.ru
+      secretName: artifact-server-tls

@@ -115,9 +115,9 @@ spec:
             - name: TZ
               value: Europe/Moscow
             - name: PROJECT_URL
-              value: https://portabase.devflux.ru
+              value: https://portabase.dev.devflux.ru
             - name: TRUSTED_DOMAINS
-              value: https://portabase.devflux.ru
+              value: https://portabase.dev.devflux.ru
             - name: AUTH_EMAIL_PASSWORD_ENABLED
               value: "true"
             - name: AUTH_SIGNUP_ENABLED
@@ -322,6 +322,16 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
+    - host: portabase.dev.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: portabase
+                port:
+                  number: 80
     - host: portabase.devflux.ru
       http:
         paths:
@@ -334,5 +344,6 @@ spec:
                   number: 80
   tls:
     - hosts:
+        - portabase.dev.devflux.ru
         - portabase.devflux.ru
       secretName: portabase-tls
