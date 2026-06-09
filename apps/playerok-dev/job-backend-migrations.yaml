@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: backend-migrations
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.31.0-dev.295-sha.101e59a85157
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.32.0-dev.299-sha.5b1b3b7e3c94
           imagePullPolicy: Always
           command: ["/opt/venv/bin/alembic"]
           args: ["upgrade", "head"]
@@ -39,7 +39,6 @@ spec:
                 name: playerok-secrets
             - secretRef:
                 name: playerok-mail-smtp
-                optional: true
           resources:
             requests:
               memory: 256Mi
