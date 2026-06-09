@@ -36,6 +36,8 @@ spec:
                 name: backend-config
             - secretRef:
                 name: playerok-secrets
+            - secretRef:
+                name: playerok-mail-smtp
           resources:
             requests:
               memory: 256Mi
