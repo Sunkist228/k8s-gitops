@@ -15,7 +15,7 @@ data:
   DB_CONNECT_DELAY_SECONDS: "2"
   ENVIRONMENT: "dev"
   FRONTEND_URL: "https://dev.devflux.ru"
-  BACKEND_PUBLIC_URL: "https://api.dev.devflux.ru"
+  BACKEND_PUBLIC_URL: "https://dev.devflux.ru"
   METRICS_ENABLED: "true"
   METRICS_PATH: "/metrics"
   EMAIL_VERIFICATION_REQUIRED: "true"

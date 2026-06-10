@@ -16,6 +16,5 @@ resources:
   - service-artifact-server.yaml
   - service-frontend.yaml
   - ingress-frontend.yaml
-  - ingress-backend.yaml
   - ingress-artifact-server.yaml
   - job-backend-migrations.yaml
