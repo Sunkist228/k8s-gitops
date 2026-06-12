@@ -49,6 +49,11 @@ BACKUPS_PORTABASE_RESOURCES = {
     "portabase.yaml",
 }
 
+BACKUPS_PORTABASE_URL = "https://portabase.devflux.ru"
+BACKUPS_FORBIDDEN_PORTABASE_URLS = {
+    "https://portabase.dev.devflux.ru",
+}
+
 
 def parse_duration_seconds(value: str) -> int | None:
     if not value:
@@ -257,12 +262,56 @@ def assert_portabase_backups_app_is_isolated() -> list[str]:
     return errors
 
 
+def assert_portabase_uses_reachable_canonical_url() -> list[str]:
+    errors: list[str] = []
+    portabase_manifest = ROOT / "apps" / "backups" / "portabase.yaml"
+    if not portabase_manifest.is_file():
+        return errors
+
+    docs = load_all(portabase_manifest)
+    deployment = next(
+        (
+            doc
+            for doc in docs
+            if doc.get("kind") == "Deployment"
+            and doc.get("metadata", {}).get("name") == "portabase"
+        ),
+        None,
+    )
+    if deployment is None:
+        errors.append("backups: missing Deployment/portabase")
+        return errors
+
+    containers = deployment.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+    container = next((item for item in containers if item.get("name") == "portabase"), None)
+    if container is None:
+        errors.append("backups: missing portabase container")
+        return errors
+
+    env = {
+        item.get("name"): item.get("value")
+        for item in container.get("env", [])
+        if "value" in item
+    }
+    for name in ("PROJECT_URL", "TRUSTED_DOMAINS"):
+        if env.get(name) != BACKUPS_PORTABASE_URL:
+            errors.append(f"backups: {name} must be {BACKUPS_PORTABASE_URL}")
+
+    manifest_text = portabase_manifest.read_text(encoding="utf-8")
+    for forbidden_url in sorted(BACKUPS_FORBIDDEN_PORTABASE_URLS):
+        if forbidden_url in manifest_text:
+            errors.append(f"backups: forbidden non-resolving URL remains: {forbidden_url}")
+
+    return errors
+
+
 def main() -> int:
     errors = (
         assert_application_safety()
         + assert_kv_group_rollout_safety()
         + assert_external_secret_recovery_safety()
         + assert_portabase_backups_app_is_isolated()
+        + assert_portabase_uses_reachable_canonical_url()
     )
     if errors:
         for error in errors:
