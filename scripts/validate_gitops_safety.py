@@ -51,6 +51,7 @@ BACKUPS_PORTABASE_RESOURCES = {
 
 BACKUPS_PORTABASE_URL = "https://portabase.devflux.ru"
 BACKUPS_FORBIDDEN_PORTABASE_URLS = {
+    "portabase.dev.devflux.ru",
     "https://portabase.dev.devflux.ru",
 }
 
