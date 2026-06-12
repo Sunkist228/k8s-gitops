@@ -9,6 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 WORKLOAD_APPS = {
+    "backups",
     "home-assistant",
     "n8n",
     "father-testing",
@@ -25,6 +26,7 @@ WORKLOAD_APPS = {
 }
 
 AUTOMATED_WORKLOAD_APPS = {
+    "backups",
     "playerok-dev",
     "playerok-pre-dev",
 }
@@ -42,6 +44,10 @@ REQUIRED_KV_GROUP_PDBS = {
 }
 
 MAX_EXTERNAL_SECRET_REFRESH_SECONDS = 300
+
+BACKUPS_PORTABASE_RESOURCES = {
+    "portabase.yaml",
+}
 
 
 def parse_duration_seconds(value: str) -> int | None:
@@ -205,11 +211,58 @@ def assert_external_secret_recovery_safety() -> list[str]:
     return errors
 
 
+def assert_portabase_backups_app_is_isolated() -> list[str]:
+    errors: list[str] = []
+    app_docs = load_all(ROOT / "bootstrap" / "apps" / "apps.yaml")
+    backups_app = next(
+        (
+            doc
+            for doc in app_docs
+            if doc.get("kind") == "Application"
+            and doc.get("metadata", {}).get("name") == "backups"
+        ),
+        None,
+    )
+
+    if backups_app is None:
+        errors.append("backups: missing Argo CD Application registration")
+    else:
+        spec = backups_app.get("spec", {})
+        source = spec.get("source", {})
+        destination = spec.get("destination", {})
+        if source.get("path") != "apps/backups":
+            errors.append("backups: Application source.path must be apps/backups")
+        if destination.get("namespace") != "playerok-dev":
+            errors.append("backups: Application destination.namespace must be playerok-dev")
+
+    playerok_kustomization = ROOT / "apps" / "playerok-dev" / "kustomization.yaml"
+    if "portabase.yaml" in playerok_kustomization.read_text(encoding="utf-8"):
+        errors.append("playerok-dev: portabase.yaml must move to apps/backups")
+
+    if (ROOT / "apps" / "playerok-dev" / "portabase.yaml").exists():
+        errors.append("playerok-dev: portabase.yaml must not remain under apps/playerok-dev")
+
+    backups_kustomization = ROOT / "apps" / "backups" / "kustomization.yaml"
+    if not backups_kustomization.is_file():
+        errors.append("backups: missing apps/backups/kustomization.yaml")
+    else:
+        kustomization = yaml.safe_load(backups_kustomization.read_text(encoding="utf-8")) or {}
+        resources = set(kustomization.get("resources", []) or [])
+        missing_resources = sorted(BACKUPS_PORTABASE_RESOURCES - resources)
+        if missing_resources:
+            errors.append(f"backups: missing resources: {', '.join(missing_resources)}")
+        if kustomization.get("namespace") != "playerok-dev":
+            errors.append("backups: kustomization namespace must be playerok-dev")
+
+    return errors
+
+
 def main() -> int:
     errors = (
         assert_application_safety()
         + assert_kv_group_rollout_safety()
         + assert_external_secret_recovery_safety()
+        + assert_portabase_backups_app_is_isolated()
     )
     if errors:
         for error in errors:

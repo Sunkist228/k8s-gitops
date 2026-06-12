@@ -8,7 +8,6 @@ resources:
   - config-artifact-server.yaml
   - secrets-externalsecret.yaml
   - secrets-artifact-server-externalsecret.yaml
-  - portabase.yaml
   - deployment-backend.yaml
   - deployment-artifact-server.yaml
   - deployment-frontend.yaml
