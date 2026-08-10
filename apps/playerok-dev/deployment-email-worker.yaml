@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-worker
+  labels:
+    app: email-worker
+    environment: dev
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: email-worker
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: email-worker
+        environment: dev
+        component: worker
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: email-worker
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.42.0-dev.406-sha.558fa046310c
+          imagePullPolicy: Always
+          command: ["/opt/venv/bin/python", "-m", "backend_app.workers.email_worker"]
+          ports:
+            - name: metrics
+              containerPort: 9101
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: playerok-secrets
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: email-worker-metrics
+  labels:
+    app: email-worker
+    environment: dev
+    component: worker
+    monitoring.devflux.io/enabled: "true"
+spec:
+  selector:
+    app: email-worker
+    environment: dev
+  ports:
+    - name: metrics
+      port: 9101
+      targetPort: metrics
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: email-worker
+  labels:
+    app: email-worker
+    environment: dev
+    component: worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: email-worker
+  minReplicas: 1
+  maxReplicas: 4
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65

@@ -27,6 +27,32 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
+  name: playerok-email-worker
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: playerok
+    component: email-worker
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  namespaceSelector:
+    matchNames:
+      - playerok-dev
+  selector:
+    matchLabels:
+      app: email-worker
+      environment: dev
+      monitoring.devflux.io/enabled: "true"
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
   name: playerok-artifact-server
   namespace: monitoring
   labels:
