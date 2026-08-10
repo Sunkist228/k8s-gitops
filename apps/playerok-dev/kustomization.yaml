@@ -10,6 +10,7 @@ resources:
   - secrets-artifact-server-externalsecret.yaml
   - portabase.yaml
   - deployment-backend.yaml
+  - deployment-email-worker.yaml
   - deployment-artifact-server.yaml
   - deployment-frontend.yaml
   - service-backend.yaml

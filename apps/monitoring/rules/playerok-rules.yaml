@@ -36,6 +36,29 @@ spec:
             summary: Playerok artifact-server is down in playerok-dev
             description: Prometheus cannot scrape the artifact-server service in playerok-dev for 2 minutes.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokEmailWorkerDown
+          expr: |
+            absent(up{namespace="playerok-dev", service="email-worker-metrics"})
+              or
+            max by (namespace, service) (up{namespace="playerok-dev", service="email-worker-metrics"}) < 1
+          for: 2m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok email worker is down in playerok-dev
+            description: Prometheus cannot scrape the email worker in playerok-dev for 2 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokEmailQueueBacklog
+          expr: sum(devflux_email_queue_depth{namespace="playerok-dev", status=~"pending|retrying"}) > 50
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok email queue has a sustained backlog
+            description: More than 50 email messages have been waiting in playerok-dev for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
         - alert: PlayerokBackendHigh5xx
           expr: |
             sum(rate(http_requests_total{namespace="playerok-dev", service="backend", status=~"5.."}[5m]))
@@ -131,7 +154,7 @@ spec:
             max by (namespace, pod, container) (
               kube_pod_container_status_waiting_reason{
                 namespace="playerok-dev",
-                pod=~"(frontend|backend|artifact-server).*",
+                pod=~"(frontend|backend|artifact-server|email-worker).*",
                 reason="CrashLoopBackOff"
               }
             ) > 0
@@ -148,7 +171,7 @@ spec:
             sum by (namespace, pod, container) (
               increase(kube_pod_container_status_restarts_total{
                 namespace="playerok-dev",
-                pod=~"(frontend|backend|artifact-server).*"
+                pod=~"(frontend|backend|artifact-server|email-worker).*"
               }[15m])
             ) > 2
           for: 5m
@@ -165,7 +188,7 @@ spec:
               sum by (namespace, pod, container) (
                 container_memory_working_set_bytes{
                   namespace="playerok-dev",
-                  pod=~"(frontend|backend|artifact-server).*",
+                  pod=~"(frontend|backend|artifact-server|email-worker).*",
                   container!="",
                   image!=""
                 }
@@ -175,7 +198,7 @@ spec:
                 sum by (namespace, pod, container) (
                   kube_pod_container_resource_limits{
                     namespace="playerok-dev",
-                    pod=~"(frontend|backend|artifact-server).*",
+                    pod=~"(frontend|backend|artifact-server|email-worker).*",
                     resource="memory",
                     unit="byte"
                   }
