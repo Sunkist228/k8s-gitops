@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: backend-migrations
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.42.0-dev.406-sha.558fa046310c
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.42.1-dev.408-sha.5ef83365e083
           imagePullPolicy: Always
           command: ["/opt/venv/bin/alembic"]
           args: ["upgrade", "head"]
