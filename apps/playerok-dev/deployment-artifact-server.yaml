@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        artifact-server.devflux.ru/config-revision: "2026-06-10-playerok-dev-public-url"
+        artifact-server.devflux.ru/config-revision: "2026-08-14-cdn-origin"
       labels:
         app: artifact-server
         environment: dev
