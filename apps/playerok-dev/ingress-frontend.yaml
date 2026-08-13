@@ -22,7 +22,18 @@ spec:
                 name: frontend
                 port:
                   number: 80
+    - host: origin.dev.devflux.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
   tls:
     - hosts:
         - dev.devflux.ru
+        - origin.dev.devflux.ru
       secretName: frontend-tls

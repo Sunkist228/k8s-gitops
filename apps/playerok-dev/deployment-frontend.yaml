@@ -34,6 +34,14 @@ spec:
               value: "backend.playerok-dev.svc.cluster.local:8000"
             - name: ARTIFACT_SERVER_UPSTREAM
               value: "artifact-server.playerok-dev.svc.cluster.local:8080"
+            - name: CDN_ORIGIN_HOST
+              value: "origin.dev.devflux.ru"
+            - name: CDN_ORIGIN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: playerok-secrets
+                  key: CDN_ORIGIN_SECRET
+                  optional: true
           ports:
             - name: http
               containerPort: 80
