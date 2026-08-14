@@ -29,6 +29,12 @@ spec:
           env:
             - name: NGINX_RESOLVER
               value: "10.152.183.10"
+            - name: FRONTEND_SEO_ENABLED
+              value: "true"
+            - name: FRONTEND_SEARCH_INDEXING
+              value: "false"
+            - name: FRONTEND_SITE_URL
+              value: "https://devflux.ru"
             - name: BACKEND_HOST
               value: "backend.playerok.svc.cluster.local"
             - name: BACKEND_UPSTREAM
