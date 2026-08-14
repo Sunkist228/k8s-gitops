@@ -18,3 +18,10 @@ spec:
       path: /metrics/prometheus
       interval: 30s
       scrapeTimeout: 10s
+      basicAuth:
+        username:
+          name: stalwart-metrics-basic-auth
+          key: username
+        password:
+          name: stalwart-metrics-basic-auth
+          key: password
