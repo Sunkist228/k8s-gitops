@@ -38,6 +38,13 @@ spec:
                 name: artifact-server-config
             - secretRef:
                 name: artifact-server-secrets
+          env:
+            - name: CDN_ORIGIN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: artifact-server-secrets
+                  key: CDN_ORIGIN_SECRET
+                  optional: false
           resources:
             requests:
               memory: 256Mi

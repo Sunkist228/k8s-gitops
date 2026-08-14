@@ -41,7 +41,7 @@ spec:
                 secretKeyRef:
                   name: playerok-secrets
                   key: CDN_ORIGIN_SECRET
-                  optional: true
+                  optional: false
           ports:
             - name: http
               containerPort: 80
