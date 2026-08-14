@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: mail-platform-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: mail-platform
+      rules:
+        - alert: StalwartMetricsTargetDown
+          expr: max(up{namespace="mail",service="mail-stalwart"}) < 1 or absent(up{namespace="mail",service="mail-stalwart"})
+          for: 15m
+          labels:
+            severity: critical
+            service: stalwart
+          annotations:
+            summary: Stalwart metrics target is unavailable
+            description: Prometheus has not scraped the Stalwart metrics endpoint for 15 minutes.
+        - alert: StalwartStatefulSetUnavailable
+          expr: kube_statefulset_status_replicas_ready{namespace="mail",statefulset="mail-stalwart"} < kube_statefulset_replicas{namespace="mail",statefulset="mail-stalwart"}
+          for: 10m
+          labels:
+            severity: critical
+            service: stalwart
+          annotations:
+            summary: Stalwart StatefulSet has no ready replica
+            description: The Stalwart mail server has fewer ready replicas than expected for 10 minutes.
+        - alert: StalwartPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="mail",pod=~"mail-stalwart-.*",container="stalwart"}[30m]) > 2
+          for: 5m
+          labels:
+            severity: warning
+            service: stalwart
+          annotations:
+            summary: Stalwart is restarting repeatedly
+            description: The Stalwart container restarted more than twice during the last 30 minutes.

@@ -1,0 +1,92 @@
+{
+  "uid": "playerok-backend-auth",
+  "title": "Playerok Backend & Authentication",
+  "description": "Backend API и полный срез аутентификации: трафик, статусы, ошибки, задержки и ресурсы.",
+  "tags": ["playerok", "backend", "authentication", "security"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "id": 1, "title": "Backend target", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(up{namespace=\"playerok-dev\",service=\"backend\"}) or vector(0)", "legendFormat": "up", "refId": "A"}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+    },
+    {
+      "id": 2, "title": "Backend request rate", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval])) or vector(0)", "legendFormat": "requests/s", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 3, "title": "Authentication request rate", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\"}[$__rate_interval])) or vector(0)", "legendFormat": "auth/s", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 4, "title": "Auth client error ratio", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\",status=~\"4..\"}[$__rate_interval])) / clamp_min(sum(rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\"}[$__rate_interval])), 0.001)", "legendFormat": "4xx", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percentunit", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 0.1}, {"color": "red", "value": 0.3}]}}}
+    },
+    {
+      "id": 5, "title": "Auth server errors", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(increase(http_requests_total{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\",status=~\"5..\"}[$__range])) or vector(0)", "legendFormat": "5xx", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "id": 6, "title": "Backend firing alerts", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "count(ALERTS{alertstate=\"firing\",alertname=~\"PlayerokBackend.*|Playerok.*Backend.*\"}) or vector(0)", "legendFormat": "alerts", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "id": 7, "title": "Authentication traffic by endpoint and status", "type": "timeseries", "gridPos": {"h": 9, "w": 12, "x": 0, "y": 4},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (handler,method,status) (rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\"}[$__rate_interval]))", "legendFormat": "{{method}} {{handler}} {{status}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0}}
+    },
+    {
+      "id": 8, "title": "Authentication latency", "type": "timeseries", "gridPos": {"h": 9, "w": 12, "x": 12, "y": 4},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.50,sum by (handler,le) (rate(http_request_duration_seconds_bucket{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\"}[$__rate_interval])))", "legendFormat": "{{handler}} p50", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95,sum by (handler,le) (rate(http_request_duration_seconds_bucket{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\"}[$__rate_interval])))", "legendFormat": "{{handler}} p95", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99,sum by (handler,le) (rate(http_request_duration_seconds_bucket{namespace=\"playerok-dev\",service=\"backend\",handler=~\"/api/v1/auth/.*\"}[$__rate_interval])))", "legendFormat": "{{handler}} p99", "refId": "C"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0}}
+    },
+    {
+      "id": 9, "title": "All backend traffic by endpoint", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(15,sum by (handler,method) (rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval])))", "legendFormat": "{{method}} {{handler}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0}}
+    },
+    {
+      "id": 10, "title": "Backend responses by status", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (status) (rate(http_requests_total{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval]))", "legendFormat": "{{status}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0}}
+    },
+    {
+      "id": 11, "title": "Request and response sizes", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 0, "y": 21},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_request_size_bytes_sum{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval])) / clamp_min(sum(rate(http_request_size_bytes_count{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval])),0.001)", "legendFormat": "request", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_response_size_bytes_sum{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval])) / clamp_min(sum(rate(http_response_size_bytes_count{namespace=\"playerok-dev\",service=\"backend\"}[$__rate_interval])),0.001)", "legendFormat": "response", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}}
+    },
+    {
+      "id": 12, "title": "Backend pod CPU and memory", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 8, "y": 21},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"playerok-dev\",pod=~\"backend-.*\",container=\"backend\"}[$__rate_interval]))", "legendFormat": "CPU cores", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(container_memory_working_set_bytes{namespace=\"playerok-dev\",pod=~\"backend-.*\",container=\"backend\"})", "legendFormat": "memory bytes", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"min": 0}}
+    },
+    {
+      "id": 13, "title": "Backend pod restarts and availability", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 16, "y": 21},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"playerok-dev\",pod=~\"backend-.*\",container=\"backend\"}[24h]))", "legendFormat": "restarts 24h", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_deployment_status_replicas_available{namespace=\"playerok-dev\",deployment=\"backend\"}", "legendFormat": "available", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    }
+  ]
+}
