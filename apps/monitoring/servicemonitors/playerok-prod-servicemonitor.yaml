@@ -1,0 +1,53 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: playerok-prod-backend
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: playerok
+    component: backend
+    environment: prod
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  namespaceSelector:
+    matchNames:
+      - playerok
+  selector:
+    matchLabels:
+      app: backend
+      environment: prod
+      monitoring.devflux.io/enabled: "true"
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: playerok-prod-email-worker
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: playerok
+    component: email-worker
+    environment: prod
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  namespaceSelector:
+    matchNames:
+      - playerok
+  selector:
+    matchLabels:
+      app: email-worker
+      environment: prod
+      monitoring.devflux.io/enabled: "true"
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
