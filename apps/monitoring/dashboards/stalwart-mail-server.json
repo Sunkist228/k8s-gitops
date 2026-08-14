@@ -5,7 +5,7 @@
   "tags": ["mail", "stalwart", "smtp", "imap"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "time": {"from": "now-24h", "to": "now"},
   "templating": {
@@ -31,7 +31,7 @@
     },
     {
       "id": 2, "title": "Ready replicas", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_statefulset_status_replicas_ready{namespace=\"mail\",statefulset=\"mail-stalwart\"} or vector(0)", "legendFormat": "ready", "refId": "A"}],
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(kube_statefulset_status_replicas_ready{namespace=\"mail\",statefulset=\"mail-stalwart\"}) or vector(0)", "legendFormat": "ready", "refId": "A"}],
       "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
     },
     {
@@ -67,23 +67,20 @@
     {
       "id": 9, "title": "Network throughput", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 16, "y": 4},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"mail\",pod=~\"mail-stalwart-.*\"}[$__rate_interval]))", "legendFormat": "{{pod}} RX", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"mail\",pod=~\"mail-stalwart-.*\"}[$__rate_interval]))", "legendFormat": "{{pod}} TX", "refId": "B"}
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"mail\",pod=~\"mail-stalwart-[0-9]+\"}[$__rate_interval]))", "legendFormat": "{{pod}} RX", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"mail\",pod=~\"mail-stalwart-[0-9]+\"}[$__rate_interval]))", "legendFormat": "{{pod}} TX", "refId": "B"}
       ],
       "fieldConfig": {"defaults": {"unit": "Bps", "min": 0}}
     },
     {
-      "id": 10, "title": "Persistent volume usage", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
-      "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kubelet_volume_stats_used_bytes{namespace=\"mail\",persistentvolumeclaim=~\"mail-stalwart-data|mail-stalwart-config\"}", "legendFormat": "{{persistentvolumeclaim}} used", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kubelet_volume_stats_capacity_bytes{namespace=\"mail\",persistentvolumeclaim=~\"mail-stalwart-data|mail-stalwart-config\"}", "legendFormat": "{{persistentvolumeclaim}} capacity", "refId": "B"}
-      ],
+      "id": 10, "title": "Persistent volume requested capacity", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max by (persistentvolumeclaim) (kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace=\"mail\",persistentvolumeclaim=~\"mail-stalwart-data|mail-stalwart-config\"})", "legendFormat": "{{persistentvolumeclaim}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}}
     },
     {
-      "id": 11, "title": "Persistent volume utilization", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "100 * kubelet_volume_stats_used_bytes{namespace=\"mail\",persistentvolumeclaim=~\"mail-stalwart-data|mail-stalwart-config\"} / clamp_min(kubelet_volume_stats_capacity_bytes{namespace=\"mail\",persistentvolumeclaim=~\"mail-stalwart-data|mail-stalwart-config\"},1)", "legendFormat": "{{persistentvolumeclaim}}", "refId": "A"}],
-      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
+      "id": 11, "title": "Persistent volume Bound status", "type": "stat", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max by (persistentvolumeclaim) (kube_persistentvolumeclaim_status_phase{namespace=\"mail\",persistentvolumeclaim=~\"mail-stalwart-data|mail-stalwart-config\",phase=\"Bound\"})", "legendFormat": "{{persistentvolumeclaim}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
     },
     {
       "id": 12, "title": "Prometheus scrape health", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
@@ -97,9 +94,9 @@
     {
       "id": 13, "title": "StatefulSet generations", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_statefulset_metadata_generation{namespace=\"mail\",statefulset=\"mail-stalwart\"}", "legendFormat": "desired generation", "refId": "A"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_statefulset_status_observed_generation{namespace=\"mail\",statefulset=\"mail-stalwart\"}", "legendFormat": "observed generation", "refId": "B"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_statefulset_status_replicas_ready{namespace=\"mail\",statefulset=\"mail-stalwart\"}", "legendFormat": "ready replicas", "refId": "C"}
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(kube_statefulset_metadata_generation{namespace=\"mail\",statefulset=\"mail-stalwart\"})", "legendFormat": "desired generation", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(kube_statefulset_status_observed_generation{namespace=\"mail\",statefulset=\"mail-stalwart\"})", "legendFormat": "observed generation", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(kube_statefulset_status_replicas_ready{namespace=\"mail\",statefulset=\"mail-stalwart\"})", "legendFormat": "ready replicas", "refId": "C"}
       ],
       "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
     },
