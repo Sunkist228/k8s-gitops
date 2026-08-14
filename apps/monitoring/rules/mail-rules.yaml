@@ -36,3 +36,30 @@ spec:
           annotations:
             summary: Stalwart is restarting repeatedly
             description: The Stalwart container restarted more than twice during the last 30 minutes.
+        - alert: StalwartAuthenticationWarnings
+          expr: increase(auth_warning{namespace="mail",service="mail-stalwart"}[10m]) > 20
+          for: 5m
+          labels:
+            severity: warning
+            service: stalwart
+          annotations:
+            summary: Stalwart authentication warnings increased
+            description: More than 20 authentication warnings were recorded during the last 10 minutes.
+        - alert: StalwartSpfTemporaryErrors
+          expr: increase(spf_temp_error{namespace="mail",service="mail-stalwart"}[15m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+            service: stalwart
+          annotations:
+            summary: Stalwart SPF temporary errors increased
+            description: More than 10 SPF temporary errors were recorded during the last 15 minutes.
+        - alert: StalwartStoreErrors
+          expr: increase(store_unexpected_error{namespace="mail",service="mail-stalwart"}[10m]) > 0
+          for: 2m
+          labels:
+            severity: critical
+            service: stalwart
+          annotations:
+            summary: Stalwart reported an unexpected storage error
+            description: At least one unexpected storage error was recorded during the last 10 minutes.

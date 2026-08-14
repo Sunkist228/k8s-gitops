@@ -5,10 +5,24 @@
   "tags": ["mail", "stalwart", "smtp", "imap"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {"from": "now-24h", "to": "now"},
-  "templating": {"list": []},
+  "templating": {
+    "list": [
+      {
+        "name": "stalwart_metric",
+        "label": "Raw Stalwart metric",
+        "type": "query",
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "query": "label_values({namespace=\"mail\",service=\"mail-stalwart\"}, __name__)",
+        "multi": true,
+        "includeAll": false,
+        "refresh": 1,
+        "current": {"selected": true, "text": ["smtp_active_connections"], "value": ["smtp_active_connections"]}
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1, "title": "Stalwart metrics target", "type": "stat", "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
@@ -88,6 +102,68 @@
         {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_statefulset_status_replicas_ready{namespace=\"mail\",statefulset=\"mail-stalwart\"}", "legendFormat": "ready replicas", "refId": "C"}
       ],
       "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    },
+    {
+      "id": 14, "title": "Users and domains", "type": "stat", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 28},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(user_count{namespace=\"mail\",service=\"mail-stalwart\"}) or vector(0)", "legendFormat": "users", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(domain_count{namespace=\"mail\",service=\"mail-stalwart\"}) or vector(0)", "legendFormat": "domains", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    },
+    {
+      "id": 15, "title": "Stalwart application memory", "type": "stat", "gridPos": {"h": 5, "w": 6, "x": 6, "y": 28},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max(server_memory{namespace=\"mail\",service=\"mail-stalwart\"}) or vector(0)", "legendFormat": "memory", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}}
+    },
+    {
+      "id": 16, "title": "Active protocol connections", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(smtp_active_connections{namespace=\"mail\",service=\"mail-stalwart\"})", "legendFormat": "SMTP", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(imap_active_connections{namespace=\"mail\",service=\"mail-stalwart\"})", "legendFormat": "IMAP", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(pop3_active_connections{namespace=\"mail\",service=\"mail-stalwart\"})", "legendFormat": "POP3", "refId": "C"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(sieve_active_connections{namespace=\"mail\",service=\"mail-stalwart\"})", "legendFormat": "ManageSieve", "refId": "D"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(http_active_connections{namespace=\"mail\",service=\"mail-stalwart\"})", "legendFormat": "HTTP/JMAP", "refId": "E"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(delivery_active_connections{namespace=\"mail\",service=\"mail-stalwart\"})", "legendFormat": "delivery", "refId": "F"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    },
+    {
+      "id": 17, "title": "IMAP protocol activity", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 0, "y": 36},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(imap_connection_start{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval]))", "legendFormat": "connections/s", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(imap_my_rights{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval]))", "legendFormat": "MYRIGHTS/s", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "min": 0}}
+    },
+    {
+      "id": 18, "title": "Authentication and SPF", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 8, "y": 36},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(auth_warning{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval]))", "legendFormat": "auth warnings/s", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(spf_pass{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval]))", "legendFormat": "SPF pass/s", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(spf_temp_error{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval]))", "legendFormat": "SPF temp errors/s", "refId": "C"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "min": 0}}
+    },
+    {
+      "id": 19, "title": "Stalwart HTTP latency", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 16, "y": 36},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.50,sum by (le) (rate(http_request_time_bucket{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval])))", "legendFormat": "p50", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95,sum by (le) (rate(http_request_time_bucket{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval])))", "legendFormat": "p95", "refId": "B"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99,sum by (le) (rate(http_request_time_bucket{namespace=\"mail\",service=\"mail-stalwart\"}[$__rate_interval])))", "legendFormat": "p99", "refId": "C"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s", "min": 0}}
+    },
+    {
+      "id": 20, "title": "Unexpected store errors", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 0, "y": 44},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(increase(store_unexpected_error{namespace=\"mail\",service=\"mail-stalwart\"}[$__interval])) or vector(0)", "legendFormat": "errors", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    },
+    {
+      "id": 21, "title": "Raw metric explorer", "type": "timeseries", "gridPos": {"h": 8, "w": 16, "x": 8, "y": 44},
+      "description": "Выберите одну или несколько серий в переменной Raw Stalwart metric. Новые метрики exporter появляются здесь автоматически.",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "{__name__=~\"$stalwart_metric\",namespace=\"mail\",service=\"mail-stalwart\"}", "legendFormat": "{{__name__}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"min": 0}}
     }
   ]
 }
