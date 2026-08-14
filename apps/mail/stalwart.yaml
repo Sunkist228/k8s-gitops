@@ -33,6 +33,7 @@ metadata:
   labels:
     app.kubernetes.io/name: mail-stalwart
     app.kubernetes.io/part-of: platform-mail
+    monitoring.devflux.io/enabled: "true"
 spec:
   type: ClusterIP
   selector:
@@ -72,6 +73,10 @@ data:
     server {
       listen 8080;
       server_name mail.devflux.ru;
+
+      location = /metrics/prometheus {
+        return 404;
+      }
 
       location / {
         proxy_pass http://mail-stalwart:8080;

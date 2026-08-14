@@ -1,0 +1,80 @@
+{
+  "uid": "playerok-platform",
+  "title": "Playerok Platform Overview",
+  "description": "Сводное состояние Playerok Devflux: приложения, почта, ресурсы и активные оповещения.",
+  "tags": ["playerok", "overview", "operations"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "id": 1, "title": "Prometheus targets", "type": "stat", "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "max by (service) (up{namespace=~\"playerok-dev|mail\",service=~\"backend|artifact-server|email-worker-metrics|mail-stalwart\"})", "legendFormat": "{{service}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+    },
+    {
+      "id": 2, "title": "Ready workload replicas", "type": "stat", "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (deployment) (kube_deployment_status_replicas_available{namespace=\"playerok-dev\",deployment=~\"frontend|backend|artifact-server|email-worker\"})", "legendFormat": "{{deployment}}", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "kube_statefulset_status_replicas_ready{namespace=\"mail\",statefulset=\"mail-stalwart\"}", "legendFormat": "stalwart", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+    },
+    {
+      "id": 3, "title": "HTTP requests", "type": "stat", "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(http_requests_total{namespace=\"playerok-dev\",service=~\"backend|artifact-server\"}[$__rate_interval])) or vector(0)", "legendFormat": "requests/s", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 4, "title": "Firing platform alerts", "type": "stat", "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "count(ALERTS{alertstate=\"firing\",alertname=~\"Playerok.*|Stalwart.*\"}) or vector(0)", "legendFormat": "alerts", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 3}]}}}
+    },
+    {
+      "id": 5, "title": "Traffic by service and status", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (service,status) (rate(http_requests_total{namespace=\"playerok-dev\",service=~\"backend|artifact-server\"}[$__rate_interval]))", "legendFormat": "{{service}} {{status}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 6, "title": "HTTP p95 latency", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95,sum by (service,le) (rate(http_request_duration_seconds_bucket{namespace=\"playerok-dev\",service=~\"backend|artifact-server\"}[$__rate_interval])))", "legendFormat": "{{service}} p95", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 7, "title": "CPU by pod", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (namespace,pod) (rate(container_cpu_usage_seconds_total{namespace=~\"playerok-dev|mail\",container!=\"\",container!=\"POD\"}[$__rate_interval]))", "legendFormat": "{{namespace}}/{{pod}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "cores"}}
+    },
+    {
+      "id": 8, "title": "Memory by pod", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (namespace,pod) (container_memory_working_set_bytes{namespace=~\"playerok-dev|mail\",container!=\"\",container!=\"POD\"})", "legendFormat": "{{namespace}}/{{pod}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 9, "title": "Container restarts (24h)", "type": "timeseries", "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (namespace,pod,container) (increase(kube_pod_container_status_restarts_total{namespace=~\"playerok-dev|mail\"}[24h]))", "legendFormat": "{{namespace}}/{{pod}} {{container}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    },
+    {
+      "id": 10, "title": "Mail queue", "type": "timeseries", "gridPos": {"h": 7, "w": 12, "x": 0, "y": 20},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "devflux_email_queue_depth{namespace=\"playerok-dev\"}", "legendFormat": "{{status}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+    },
+    {
+      "id": 11, "title": "Artifact storage", "type": "timeseries", "gridPos": {"h": 7, "w": 6, "x": 12, "y": 20},
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "artifact_storage_used_bytes{namespace=\"playerok-dev\"}", "legendFormat": "used", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}}
+    },
+    {
+      "id": 12, "title": "Network throughput", "type": "timeseries", "gridPos": {"h": 7, "w": 6, "x": 18, "y": 20},
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (namespace,pod) (rate(container_network_receive_bytes_total{namespace=~\"playerok-dev|mail\"}[$__rate_interval]))", "legendFormat": "{{namespace}}/{{pod}} RX", "refId": "A"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (namespace,pod) (rate(container_network_transmit_bytes_total{namespace=~\"playerok-dev|mail\"}[$__rate_interval]))", "legendFormat": "{{namespace}}/{{pod}} TX", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "Bps", "min": 0}}
+    }
+  ]
+}
