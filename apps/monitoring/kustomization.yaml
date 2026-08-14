@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - externalsecrets/grafana-admin-externalsecret.yaml
   - externalsecrets/alertmanager-telegram-externalsecret.yaml
+  - externalsecrets/stalwart-metrics-externalsecret.yaml
   - servicemonitors/argocd-servicemonitors.yaml
   - servicemonitors/jenkins-notify-servicemonitor.yaml
   - servicemonitors/ingress-api-servicemonitor.yaml

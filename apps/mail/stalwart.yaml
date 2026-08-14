@@ -218,6 +218,11 @@ spec:
                 secretKeyRef:
                   name: mail-stalwart-secrets
                   key: STALWART_RECOVERY_ADMIN
+            - name: STALWART_PROMETHEUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stalwart-metrics-basic-auth
+                  key: password
           readinessProbe:
             tcpSocket:
               port: 8080
