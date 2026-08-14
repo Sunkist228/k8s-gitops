@@ -18,6 +18,10 @@ path "secret/data/playerok-dev/*" {
   capabilities = ["read"]
 }
 
+path "secret/data/playerok/*" {
+  capabilities = ["read"]
+}
+
 path "secret/data/databases/*" {
   capabilities = ["read"]
 }

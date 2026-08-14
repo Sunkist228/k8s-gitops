@@ -32,7 +32,7 @@ spec:
             - name: FRONTEND_SEO_ENABLED
               value: "true"
             - name: FRONTEND_SEARCH_INDEXING
-              value: "false"
+              value: "true"
             - name: FRONTEND_SITE_URL
               value: "https://devflux.ru"
             - name: BACKEND_HOST
@@ -44,3 +44,22 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

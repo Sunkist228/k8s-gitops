@@ -8,7 +8,8 @@ metadata:
     environment: prod
     component: api
 spec:
-  replicas: 1
+  # Activate only after the production database and Vault values are verified.
+  replicas: 0
   selector:
     matchLabels:
       app: backend
@@ -22,6 +23,9 @@ spec:
     spec:
       imagePullSecrets:
         - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: backend
           image: harbor.devflux.ru/playerok-devflux/backend-prod:1
@@ -29,10 +33,27 @@ spec:
           ports:
             - name: http
               containerPort: 8000
-          env:
-            - name: ENVIRONMENT
-              value: "prod"
-            - name: FRONTEND_URL
-              value: "https://devflux.ru"
-            - name: BACKEND_PUBLIC_URL
-              value: "https://api.devflux.ru"
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: playerok-secrets
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 35
+            periodSeconds: 5
