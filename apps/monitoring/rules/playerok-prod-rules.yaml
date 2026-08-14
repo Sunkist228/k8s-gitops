@@ -13,9 +13,9 @@ spec:
       rules:
         - alert: PlayerokProdBackendDown
           expr: |
-            absent(up{namespace="playerok", service="backend"})
-              or
-            max by (namespace, service) (up{namespace="playerok", service="backend"}) < 1
+            kube_deployment_spec_replicas{namespace="playerok", deployment="backend"} > 0
+              unless on (namespace)
+            max by (namespace) (up{namespace="playerok", service="backend"} == 1)
           for: 2m
           labels:
             severity: critical
@@ -26,9 +26,9 @@ spec:
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
         - alert: PlayerokProdEmailWorkerDown
           expr: |
-            absent(up{namespace="playerok", service="email-worker-metrics"})
-              or
-            max by (namespace, service) (up{namespace="playerok", service="email-worker-metrics"}) < 1
+            kube_deployment_spec_replicas{namespace="playerok", deployment="email-worker"} > 0
+              unless on (namespace)
+            max by (namespace) (up{namespace="playerok", service="email-worker-metrics"} == 1)
           for: 2m
           labels:
             severity: critical
