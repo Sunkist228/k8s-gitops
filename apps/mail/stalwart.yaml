@@ -109,6 +109,8 @@ spec:
       app.kubernetes.io/name: mail-stalwart-web-proxy
   template:
     metadata:
+      annotations:
+        observability.devflux.io/config-revision: "2026-08-14-metrics-block"
       labels:
         app.kubernetes.io/name: mail-stalwart-web-proxy
         app.kubernetes.io/part-of: platform-mail
