@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: playerok
+  annotations:
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
   labels:
     app: frontend
     environment: prod
@@ -24,7 +26,7 @@ spec:
         - name: harbor-registry
       containers:
         - name: frontend
-          image: harbor.devflux.ru/playerok-devflux/frontend-prod:1
+          image: harbor.devflux.ru/playerok-devflux/frontend-prod:v0.46.3-build.13-sha.62cd84e12233
           imagePullPolicy: Always
           env:
             - name: NGINX_RESOLVER
