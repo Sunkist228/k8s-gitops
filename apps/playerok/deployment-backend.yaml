@@ -38,6 +38,11 @@ spec:
                 name: backend-config
             - secretRef:
                 name: playerok-secrets
+          env:
+            # Temporary: the production S3 endpoint is unreachable from the cluster.
+            # Keep the landing API startup independent from optional avatar storage.
+            - name: S3_ENDPOINT_URL
+              value: ""
           resources:
             requests:
               memory: 256Mi
