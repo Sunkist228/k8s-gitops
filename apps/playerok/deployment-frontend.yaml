@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: playerok
-  annotations:
-    argocd.argoproj.io/sync-options: Force=true,Replace=true
   labels:
     app: frontend
     environment: prod
