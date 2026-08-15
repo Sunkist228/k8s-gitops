@@ -5,6 +5,7 @@ resources:
   - config-backend.yaml
   - secrets-externalsecret.yaml
   - deployment-backend.yaml
+  - job-backend-migrations.yaml
   - deployment-email-worker.yaml
   - deployment-frontend.yaml
   - service-backend.yaml
