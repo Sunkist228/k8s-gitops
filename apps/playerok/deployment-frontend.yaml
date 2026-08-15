@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: playerok
+  annotations:
+    argocd.argoproj.io/sync-options: Force=false,Replace=false
+    devflux.io/migration: legacy-selector-v0.46.3
   labels:
     app: frontend
     environment: prod
