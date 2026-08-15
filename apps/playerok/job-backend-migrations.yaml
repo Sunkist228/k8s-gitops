@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: backend-migrations
-          image: harbor.devflux.ru/playerok-devflux/backend-prod:v0.46.3-landing.1-sha.62cd84e12233
+          image: harbor.devflux.ru/playerok-devflux/backend-prod:v0.46.4-build.16-sha.0a6689e6c69c
           imagePullPolicy: Always
           command: ["/opt/venv/bin/alembic"]
           args: ["upgrade", "head"]
@@ -37,6 +37,11 @@ spec:
                 name: backend-config
             - secretRef:
                 name: playerok-secrets
+          env:
+            # Temporary: the production S3 endpoint is unreachable from the cluster.
+            # Keep the landing API startup independent from optional avatar storage.
+            - name: S3_ENDPOINT_URL
+              value: ""
           resources:
             requests:
               memory: 256Mi
