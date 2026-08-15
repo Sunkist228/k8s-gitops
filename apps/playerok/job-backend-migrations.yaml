@@ -1,38 +1,37 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: backend
-  namespace: playerok
+  name: backend-migrations
   labels:
     app: backend
     environment: prod
-    component: api
+    component: migrations
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
-  # Production database and Vault values were verified before activation.
-  replicas: 1
-  selector:
-    matchLabels:
-      app: backend
-      environment: prod
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       labels:
         app: backend
         environment: prod
-        component: api
+        component: migrations
     spec:
+      restartPolicy: Never
       imagePullSecrets:
         - name: harbor-registry
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-        - name: backend
+        - name: backend-migrations
           image: harbor.devflux.ru/playerok-devflux/backend-prod:v0.46.3-landing.1-sha.62cd84e12233
           imagePullPolicy: Always
-          ports:
-            - name: http
-              containerPort: 8000
+          command: ["/opt/venv/bin/alembic"]
+          args: ["upgrade", "head"]
           envFrom:
             - configMapRef:
                 name: backend-config
@@ -45,15 +44,3 @@ spec:
             limits:
               memory: 512Mi
               cpu: 500m
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 45
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 35
-            periodSeconds: 5
