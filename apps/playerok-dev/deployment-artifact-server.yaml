@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       annotations:
-        artifact-server.devflux.ru/config-revision: "2026-06-10-playerok-dev-public-url"
+        artifact-server.devflux.ru/config-revision: "2026-08-14-cdn-origin"
       labels:
         app: artifact-server
         environment: dev
@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: artifact-server
-          image: harbor.devflux.ru/playerok-devflux/artifact-server-dev:v0.34.0-dev.327-sha.22b990af49ae
+          image: harbor.devflux.ru/playerok-devflux/artifact-server-dev:v0.45.0-dev.423-sha.2fe6a47676d3
           imagePullPolicy: Always
           ports:
             - name: http
@@ -38,6 +38,13 @@ spec:
                 name: artifact-server-config
             - secretRef:
                 name: artifact-server-secrets
+          env:
+            - name: CDN_ORIGIN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: artifact-server-secrets
+                  key: CDN_ORIGIN_SECRET
+                  optional: false
           resources:
             requests:
               memory: 256Mi

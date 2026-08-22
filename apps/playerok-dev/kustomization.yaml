@@ -9,6 +9,7 @@ resources:
   - secrets-externalsecret.yaml
   - secrets-artifact-server-externalsecret.yaml
   - deployment-backend.yaml
+  - deployment-email-worker.yaml
   - deployment-artifact-server.yaml
   - deployment-frontend.yaml
   - service-backend.yaml

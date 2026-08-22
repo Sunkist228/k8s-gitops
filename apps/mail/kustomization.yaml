@@ -5,4 +5,5 @@ namespace: mail
 
 resources:
   - namespace.yaml
+  - stalwart-metrics-externalsecret.yaml
   - stalwart.yaml

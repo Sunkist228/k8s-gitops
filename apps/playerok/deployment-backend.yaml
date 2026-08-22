@@ -8,6 +8,7 @@ metadata:
     environment: prod
     component: api
 spec:
+  # Production database and Vault values were verified before activation.
   replicas: 1
   selector:
     matchLabels:
@@ -22,17 +23,42 @@ spec:
     spec:
       imagePullSecrets:
         - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: backend
-          image: harbor.devflux.ru/playerok-devflux/backend-prod:1
+          image: harbor.devflux.ru/playerok-devflux/backend-prod:v0.47.2-build.26-sha.a0d0e13202f6
           imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: playerok-secrets
           env:
-            - name: ENVIRONMENT
-              value: "prod"
-            - name: FRONTEND_URL
-              value: "https://devflux.ru"
-            - name: BACKEND_PUBLIC_URL
-              value: "https://api.devflux.ru"
+            # Temporary: the production S3 endpoint is unreachable from the cluster.
+            # Keep the landing API startup independent from optional avatar storage.
+            - name: S3_ENDPOINT_URL
+              value: ""
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 35
+            periodSeconds: 5

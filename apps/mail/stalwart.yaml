@@ -33,6 +33,7 @@ metadata:
   labels:
     app.kubernetes.io/name: mail-stalwart
     app.kubernetes.io/part-of: platform-mail
+    monitoring.devflux.io/enabled: "true"
 spec:
   type: ClusterIP
   selector:
@@ -73,6 +74,10 @@ data:
       listen 8080;
       server_name mail.devflux.ru;
 
+      location = /metrics/prometheus {
+        return 404;
+      }
+
       location / {
         proxy_pass http://mail-stalwart:8080;
         proxy_http_version 1.1;
@@ -104,6 +109,8 @@ spec:
       app.kubernetes.io/name: mail-stalwart-web-proxy
   template:
     metadata:
+      annotations:
+        observability.devflux.io/config-revision: "2026-08-14-metrics-block"
       labels:
         app.kubernetes.io/name: mail-stalwart-web-proxy
         app.kubernetes.io/part-of: platform-mail
@@ -211,6 +218,11 @@ spec:
                 secretKeyRef:
                   name: mail-stalwart-secrets
                   key: STALWART_RECOVERY_ADMIN
+            - name: STALWART_PROMETHEUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stalwart-metrics-basic-auth
+                  key: password
           readinessProbe:
             tcpSocket:
               port: 8080

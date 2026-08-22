@@ -23,17 +23,31 @@ spec:
         - name: harbor-registry
       containers:
         - name: frontend
-          image: harbor.devflux.ru/playerok-devflux/frontend-dev:v0.36.2-dev.337-sha.381fab931222
+          image: harbor.devflux.ru/playerok-devflux/frontend-dev:v0.47.0-dev.427-sha.a6bf73c53656
           imagePullPolicy: Always
           env:
             - name: NGINX_RESOLVER
               value: "10.152.183.10"
+            - name: FRONTEND_SEO_ENABLED
+              value: "true"
+            - name: FRONTEND_SEARCH_INDEXING
+              value: "false"
+            - name: FRONTEND_SITE_URL
+              value: "https://devflux.ru"
             - name: BACKEND_HOST
               value: "backend.playerok-dev.svc.cluster.local"
             - name: BACKEND_UPSTREAM
               value: "backend.playerok-dev.svc.cluster.local:8000"
             - name: ARTIFACT_SERVER_UPSTREAM
               value: "artifact-server.playerok-dev.svc.cluster.local:8080"
+            - name: CDN_ORIGIN_HOST
+              value: "origin.dev.devflux.ru"
+            - name: CDN_ORIGIN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: playerok-secrets
+                  key: CDN_ORIGIN_SECRET
+                  optional: false
           ports:
             - name: http
               containerPort: 80

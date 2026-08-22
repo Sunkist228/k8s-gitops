@@ -4,7 +4,7 @@ metadata:
   name: backend-migrations
   labels:
     app: backend
-    environment: dev
+    environment: prod
     component: migrations
   annotations:
     argocd.argoproj.io/hook: PreSync
@@ -17,7 +17,7 @@ spec:
     metadata:
       labels:
         app: backend
-        environment: dev
+        environment: prod
         component: migrations
     spec:
       restartPolicy: Never
@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: backend-migrations
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.47.0-dev.427-sha.a6bf73c53656
+          image: harbor.devflux.ru/playerok-devflux/backend-prod:v0.47.2-build.26-sha.a0d0e13202f6
           imagePullPolicy: Always
           command: ["/opt/venv/bin/alembic"]
           args: ["upgrade", "head"]
@@ -37,6 +37,11 @@ spec:
                 name: backend-config
             - secretRef:
                 name: playerok-secrets
+          env:
+            # Temporary: the production S3 endpoint is unreachable from the cluster.
+            # Keep the landing API startup independent from optional avatar storage.
+            - name: S3_ENDPOINT_URL
+              value: ""
           resources:
             requests:
               memory: 256Mi

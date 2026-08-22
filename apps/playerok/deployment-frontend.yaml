@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: playerok
+  annotations:
+    argocd.argoproj.io/sync-options: Force=false,Replace=false
+    devflux.io/migration: legacy-selector-v0.46.3
   labels:
     app: frontend
     environment: prod
@@ -24,11 +27,17 @@ spec:
         - name: harbor-registry
       containers:
         - name: frontend
-          image: harbor.devflux.ru/playerok-devflux/frontend-prod:1
-          imagePullPolicy: Always
+          image: harbor.devflux.ru/playerok-devflux/frontend-prod:v0.47.2-build.26-sha.a0d0e13202f6
+          imagePullPolicy: IfNotPresent
           env:
             - name: NGINX_RESOLVER
               value: "10.152.183.10"
+            - name: FRONTEND_SEO_ENABLED
+              value: "true"
+            - name: FRONTEND_SEARCH_INDEXING
+              value: "true"
+            - name: FRONTEND_SITE_URL
+              value: "https://devflux.ru"
             - name: BACKEND_HOST
               value: "backend.playerok.svc.cluster.local"
             - name: BACKEND_UPSTREAM
@@ -38,3 +47,22 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

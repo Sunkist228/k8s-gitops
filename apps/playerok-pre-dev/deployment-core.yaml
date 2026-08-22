@@ -29,7 +29,7 @@ spec:
         - name: harbor-registry
       containers:
         - name: core
-          image: harbor.devflux.ru/playerok-devflux/core-pre-dev:2
+          image: harbor.devflux.ru/playerok-devflux/core-pre-dev:v0.36.4-pre.14-sha.87d0709437b7
           imagePullPolicy: Always
           ports:
             - name: http

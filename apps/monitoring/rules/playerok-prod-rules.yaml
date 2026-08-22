@@ -1,0 +1,100 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: playerok-prod-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: playerok
+    environment: prod
+spec:
+  groups:
+    - name: playerok.prod.rules
+      rules:
+        - alert: PlayerokProdBackendDown
+          expr: |
+            kube_deployment_spec_replicas{namespace="playerok", deployment="backend"} > 0
+              unless on (namespace)
+            max by (namespace) (up{namespace="playerok", service="backend"} == 1)
+          for: 2m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok production backend is down
+            description: Prometheus cannot scrape the backend service in playerok for 2 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
+        - alert: PlayerokProdEmailWorkerDown
+          expr: |
+            kube_deployment_spec_replicas{namespace="playerok", deployment="email-worker"} > 0
+              unless on (namespace)
+            max by (namespace) (up{namespace="playerok", service="email-worker-metrics"} == 1)
+          for: 2m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok production email worker is down
+            description: Prometheus cannot scrape the email worker in playerok for 2 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
+        - alert: PlayerokProdEmailQueueBacklog
+          expr: sum(devflux_email_queue_depth{namespace="playerok", status=~"pending|retrying"}) > 50
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok production email queue has a sustained backlog
+            description: More than 50 email messages have been waiting in playerok for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
+        - alert: PlayerokProdBackendHigh5xx
+          expr: |
+            sum(rate(http_requests_total{namespace="playerok", service="backend", status=~"5.."}[5m]))
+              /
+            clamp_min(sum(rate(http_requests_total{namespace="playerok", service="backend"}[5m])), 1)
+              > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Playerok production backend has a high 5xx ratio
+            description: 5xx responses are above 5 percent for 10 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
+        - alert: PlayerokProdFrontendUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace="playerok", deployment="frontend"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok production frontend has unavailable replicas
+            description: Deployment frontend in playerok has unavailable replicas for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
+        - alert: PlayerokProdBackendUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace="playerok", deployment="backend"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok production backend has unavailable replicas
+            description: Deployment backend in playerok has unavailable replicas for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts
+        - alert: PlayerokProdPodCrashLooping
+          expr: |
+            max by (namespace, pod, container) (
+              kube_pod_container_status_waiting_reason{
+                namespace="playerok",
+                pod=~"(frontend|backend|email-worker).*",
+                reason="CrashLoopBackOff"
+              }
+            ) > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok production pod is crash-looping
+            description: Container {{ $labels.container }} in {{ $labels.pod }} is in CrashLoopBackOff.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/main/docs/monitoring.md#alerts

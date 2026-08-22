@@ -1,0 +1,65 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: mail-platform-rules
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: mail-platform
+      rules:
+        - alert: StalwartMetricsTargetDown
+          expr: max(up{namespace="mail",service="mail-stalwart"}) < 1 or absent(up{namespace="mail",service="mail-stalwart"})
+          for: 15m
+          labels:
+            severity: critical
+            service: stalwart
+          annotations:
+            summary: Stalwart metrics target is unavailable
+            description: Prometheus has not scraped the Stalwart metrics endpoint for 15 minutes.
+        - alert: StalwartStatefulSetUnavailable
+          expr: kube_statefulset_status_replicas_ready{namespace="mail",statefulset="mail-stalwart"} < kube_statefulset_replicas{namespace="mail",statefulset="mail-stalwart"}
+          for: 10m
+          labels:
+            severity: critical
+            service: stalwart
+          annotations:
+            summary: Stalwart StatefulSet has no ready replica
+            description: The Stalwart mail server has fewer ready replicas than expected for 10 minutes.
+        - alert: StalwartPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="mail",pod=~"mail-stalwart-.*",container="stalwart"}[30m]) > 2
+          for: 5m
+          labels:
+            severity: warning
+            service: stalwart
+          annotations:
+            summary: Stalwart is restarting repeatedly
+            description: The Stalwart container restarted more than twice during the last 30 minutes.
+        - alert: StalwartAuthenticationWarnings
+          expr: increase(auth_warning{namespace="mail",service="mail-stalwart"}[10m]) > 20
+          for: 5m
+          labels:
+            severity: warning
+            service: stalwart
+          annotations:
+            summary: Stalwart authentication warnings increased
+            description: More than 20 authentication warnings were recorded during the last 10 minutes.
+        - alert: StalwartSpfTemporaryErrors
+          expr: increase(spf_temp_error{namespace="mail",service="mail-stalwart"}[15m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+            service: stalwart
+          annotations:
+            summary: Stalwart SPF temporary errors increased
+            description: More than 10 SPF temporary errors were recorded during the last 15 minutes.
+        - alert: StalwartStoreErrors
+          expr: increase(store_unexpected_error{namespace="mail",service="mail-stalwart"}[10m]) > 0
+          for: 2m
+          labels:
+            severity: critical
+            service: stalwart
+          annotations:
+            summary: Stalwart reported an unexpected storage error
+            description: At least one unexpected storage error was recorded during the last 10 minutes.

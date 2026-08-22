@@ -28,7 +28,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: backend
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.36.0-dev.334-sha.1a6e3b21cedf
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.47.0-dev.427-sha.a6bf73c53656
           imagePullPolicy: Always
           ports:
             - name: http
@@ -38,8 +38,6 @@ spec:
                 name: backend-config
             - secretRef:
                 name: playerok-secrets
-            - secretRef:
-                name: playerok-mail-smtp
           resources:
             requests:
               memory: 256Mi

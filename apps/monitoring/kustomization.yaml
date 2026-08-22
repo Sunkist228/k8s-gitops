@@ -5,11 +5,16 @@ resources:
   - namespace.yaml
   - externalsecrets/grafana-admin-externalsecret.yaml
   - externalsecrets/alertmanager-telegram-externalsecret.yaml
+  - externalsecrets/stalwart-metrics-externalsecret.yaml
   - servicemonitors/argocd-servicemonitors.yaml
   - servicemonitors/jenkins-notify-servicemonitor.yaml
   - servicemonitors/ingress-api-servicemonitor.yaml
   - servicemonitors/playerok-backend-servicemonitor.yaml
+  - servicemonitors/playerok-prod-servicemonitor.yaml
+  - servicemonitors/stalwart-servicemonitor.yaml
   - rules/playerok-rules.yaml
+  - rules/playerok-prod-rules.yaml
+  - rules/mail-rules.yaml
   - dashboards/argocd-health-dashboard-cm.yaml
   - dashboards/jenkins-notify-dashboard-cm.yaml
   - dashboards/ingress-api-dashboard-cm.yaml
@@ -17,3 +22,48 @@ resources:
   - dashboards/k8s-cluster-overview-dashboard-cm.yaml
   - dashboards/k8s-namespace-workloads-dashboard-cm.yaml
   - uptime-kuma
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: grafana-dashboard-playerok-platform-overview
+    namespace: monitoring
+    files:
+      - playerok-platform-overview.json=dashboards/playerok-platform-overview.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+        app: playerok
+  - name: grafana-dashboard-playerok-backend-auth
+    namespace: monitoring
+    files:
+      - playerok-backend-auth.json=dashboards/playerok-backend-auth.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+        app: playerok
+  - name: grafana-dashboard-playerok-artifact-server
+    namespace: monitoring
+    files:
+      - playerok-artifact-server.json=dashboards/playerok-artifact-server.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+        app: playerok
+  - name: grafana-dashboard-playerok-mail-delivery
+    namespace: monitoring
+    files:
+      - playerok-mail-delivery.json=dashboards/playerok-mail-delivery.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+        app: playerok
+  - name: grafana-dashboard-stalwart-mail-server
+    namespace: monitoring
+    files:
+      - stalwart-mail-server.json=dashboards/stalwart-mail-server.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+        app: stalwart

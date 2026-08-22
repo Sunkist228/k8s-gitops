@@ -4,18 +4,18 @@ metadata:
   name: backend-config
   labels:
     app: backend
-    environment: dev
+    environment: prod
     component: api
 data:
-  AUTO_CREATE_TABLES: "true"
+  AUTO_CREATE_TABLES: "false"
   JWT_ALGORITHM: "HS256"
   ACCESS_TOKEN_EXPIRES_MINUTES: "30"
   REFRESH_TOKEN_EXPIRES_DAYS: "7"
   DB_CONNECT_RETRIES: "10"
   DB_CONNECT_DELAY_SECONDS: "2"
-  ENVIRONMENT: "dev"
-  FRONTEND_URL: "https://dev.devflux.ru"
-  BACKEND_PUBLIC_URL: "https://dev.devflux.ru"
+  ENVIRONMENT: "prod"
+  FRONTEND_URL: "https://devflux.ru"
+  BACKEND_PUBLIC_URL: "https://api.devflux.ru"
   METRICS_ENABLED: "true"
   METRICS_PATH: "/metrics"
   EMAIL_VERIFICATION_REQUIRED: "true"
@@ -32,10 +32,13 @@ data:
   EMAIL_WORKER_CLAIM_TIMEOUT_SECONDS: "300"
   EMAIL_WORKER_HEARTBEAT_TTL_SECONDS: "30"
   EMAIL_WORKER_METRICS_PORT: "9101"
+  BETA_REGISTRATION_INVITE_REQUIRED: "true"
+  BETA_INVITE_TTL_DAYS: "21"
   MAIL_FROM_EMAIL: "noreply@devflux.ru"
   MAIL_FROM_NAME: "Devflux"
-  MAIL_DRY_RUN: "false"
-  EMAIL_BRAND_LOGO_URL: "https://dev.devflux.ru/devflux-mail-logo.png"
+  # Keep delivery disabled until the production Vault values and mailbox are verified.
+  MAIL_DRY_RUN: "true"
+  EMAIL_BRAND_LOGO_URL: "https://devflux.ru/devflux-mail-logo.png"
   EMAIL_BIMI_SELECTOR: "default"
   SMTP_PORT: "587"
   SMTP_USE_SSL: "false"

@@ -2,6 +2,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: backend
+  labels:
+    app: backend
+    environment: prod
+    component: api
+    monitoring.devflux.io/enabled: "true"
 spec:
   selector:
     app: backend
