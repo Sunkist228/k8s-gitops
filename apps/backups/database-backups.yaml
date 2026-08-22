@@ -1,0 +1,219 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database-backup-storage
+  namespace: playerok-dev
+  labels:
+    app: database-backups
+    environment: dev
+    component: database-backups
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-backup-scripts
+  namespace: playerok-dev
+  labels:
+    app: database-backups
+    environment: dev
+    component: database-backups
+data:
+  database-backup.sh: |
+    #!/bin/sh
+    set -eu
+
+    BACKUP_ROOT="${BACKUP_ROOT:-/backups}"
+    RETENTION_DAYS="${DATABASE_BACKUP_RETENTION_DAYS:-7}"
+    TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+
+    backup_postgres() {
+      test -n "${POSTGRES_PASSWORD:-}" || {
+        echo "POSTGRES_PASSWORD is required" >&2
+        return 1
+      }
+
+      export PGPASSWORD="${POSTGRES_PASSWORD}"
+      mkdir -p "${BACKUP_ROOT}/postgres"
+
+      failed=0
+      for database in ${POSTGRES_DATABASES:-playerok_dev playerok_preprod playerok_prod}; do
+        sql="/tmp/${database}-${TIMESTAMP}.sql.tmp"
+        temp="/tmp/${database}-${TIMESTAMP}.sql.gz.tmp"
+        target="${BACKUP_ROOT}/postgres/${database}-${TIMESTAMP}.sql.gz"
+        echo "Backing up PostgreSQL database ${database}"
+
+        if pg_dump \
+          -h "${POSTGRES_HOST:-postgres-service.databases.svc.cluster.local}" \
+          -p "${POSTGRES_PORT:-5432}" \
+          -U "${POSTGRES_USER:-playerok}" \
+          -d "${database}" \
+          --format=plain \
+          --no-owner \
+          --no-privileges \
+          --no-acl \
+          > "${sql}"; then
+          gzip -c "${sql}" > "${temp}"
+          mv "${temp}" "${target}"
+          rm -f "${sql}"
+          echo "PostgreSQL backup created: ${target}"
+        else
+          rm -f "${sql}" "${temp}"
+          echo "PostgreSQL backup failed for ${database}" >&2
+          failed=1
+        fi
+      done
+
+      return "${failed}"
+    }
+
+    upload_s3() {
+      if [ "${S3_UPLOAD_ENABLED:-false}" != "true" ] && [ "${S3_UPLOAD_ENABLED:-false}" != "1" ]; then
+        echo "S3 upload disabled; retaining PVC copy only"
+        return 0
+      fi
+
+      test -n "${S3_ENDPOINT_URL:-}" || { echo "S3_ENDPOINT_URL is required" >&2; return 1; }
+      test -n "${S3_ACCESS_KEY:-}" || { echo "S3_ACCESS_KEY is required" >&2; return 1; }
+      test -n "${S3_SECRET_KEY:-}" || { echo "S3_SECRET_KEY is required" >&2; return 1; }
+      test -n "${S3_BUCKET:-}" || { echo "S3_BUCKET is required" >&2; return 1; }
+
+      remote="${S3_REMOTE_NAME:-S3_BACKUP}"
+      export "RCLONE_CONFIG_${remote}_TYPE=S3"
+      export "RCLONE_CONFIG_${remote}_PROVIDER=${S3_PROVIDER:-Other}"
+      export "RCLONE_CONFIG_${remote}_ACCESS_KEY_ID=${S3_ACCESS_KEY}"
+      export "RCLONE_CONFIG_${remote}_SECRET_ACCESS_KEY=${S3_SECRET_KEY}"
+      export "RCLONE_CONFIG_${remote}_ENDPOINT=${S3_ENDPOINT_URL}"
+      export "RCLONE_CONFIG_${remote}_REGION=${S3_REGION:-us-east-1}"
+      export "RCLONE_CONFIG_${remote}_FORCE_PATH_STYLE=true"
+
+      rclone copy "${BACKUP_ROOT}/" \
+        "${remote}:${S3_BUCKET}/${S3_PREFIX:-kubernetes/database-backups}/${TIMESTAMP}/" \
+        --create-empty-src-dirs
+
+      if [ "${S3_REMOVE_OLDER_THAN_DAYS:-0}" -gt 0 ]; then
+        rclone delete \
+          "${remote}:${S3_BUCKET}/${S3_PREFIX:-kubernetes/database-backups}" \
+          --rmdirs \
+          --min-age "${S3_REMOVE_OLDER_THAN_DAYS}d" || true
+      fi
+    }
+
+    cleanup_local() {
+      find "${BACKUP_ROOT}" -type f -name "*.sql.gz" -mtime +"${RETENTION_DAYS}" -delete || true
+    }
+
+    case "${1:-postgres}" in
+      postgres) backup_postgres ;;
+      upload) upload_s3 ;;
+      *) echo "Usage: $0 {postgres|upload}" >&2; exit 2 ;;
+    esac
+
+    cleanup_local
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: database-backups
+  namespace: playerok-dev
+  labels:
+    app: database-backups
+    environment: dev
+    component: database-backups
+spec:
+  schedule: "30 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app: database-backups
+        environment: dev
+        component: database-backups
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app: database-backups
+            environment: dev
+            component: database-backups
+        spec:
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: harbor-registry
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          initContainers:
+            - name: postgres-backup
+              image: postgres:16-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - /scripts/database-backup.sh postgres
+              envFrom:
+                - secretRef:
+                    name: database-backup-credentials
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+                - name: backup-scripts
+                  mountPath: /scripts
+                  readOnly: true
+          containers:
+            - name: upload-backups
+              image: rclone/rclone:latest
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - /scripts/database-backup.sh upload
+              env:
+                - name: HOME
+                  value: /tmp
+              envFrom:
+                - secretRef:
+                    name: database-backup-credentials
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+                - name: backup-scripts
+                  mountPath: /scripts
+                  readOnly: true
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: database-backup-storage
+            - name: backup-scripts
+              configMap:
+                name: database-backup-scripts
+                defaultMode: 0555

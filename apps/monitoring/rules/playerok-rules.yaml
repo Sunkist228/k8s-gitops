@@ -154,7 +154,7 @@ spec:
             max by (namespace, pod, container) (
               kube_pod_container_status_waiting_reason{
                 namespace="playerok-dev",
-                pod=~"(frontend|backend|artifact-server|email-worker).*",
+                pod=~"(frontend|backend|artifact-server|email-worker|portabase|database-backups).*",
                 reason="CrashLoopBackOff"
               }
             ) > 0
@@ -171,7 +171,7 @@ spec:
             sum by (namespace, pod, container) (
               increase(kube_pod_container_status_restarts_total{
                 namespace="playerok-dev",
-                pod=~"(frontend|backend|artifact-server|email-worker).*"
+                pod=~"(frontend|backend|artifact-server|email-worker|portabase|database-backups).*"
               }[15m])
             ) > 2
           for: 5m
@@ -188,7 +188,7 @@ spec:
               sum by (namespace, pod, container) (
                 container_memory_working_set_bytes{
                   namespace="playerok-dev",
-                  pod=~"(frontend|backend|artifact-server|email-worker).*",
+                  pod=~"(frontend|backend|artifact-server|email-worker|portabase|database-backups).*",
                   container!="",
                   image!=""
                 }
@@ -198,7 +198,7 @@ spec:
                 sum by (namespace, pod, container) (
                   kube_pod_container_resource_limits{
                     namespace="playerok-dev",
-                    pod=~"(frontend|backend|artifact-server|email-worker).*",
+                    pod=~"(frontend|backend|artifact-server|email-worker|portabase|database-backups).*",
                     resource="memory",
                     unit="byte"
                   }
@@ -244,3 +244,52 @@ spec:
             summary: Playerok artifact upload failed
             description: Artifact uploads are returning duplicate, storage_error, or error results in playerok-dev.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokPortabaseUnavailable
+          expr: |
+            kube_deployment_status_replicas_unavailable{
+              namespace="playerok-dev",
+              deployment=~"portabase|portabase-agent"
+            } > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Portabase deployment is unavailable
+            description: Portabase or its backup agent has unavailable replicas in playerok-dev for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/k8s-gitops/blob/main/apps/backups/README.md#recovery-checks
+        - alert: PlayerokDatabaseBackupJobFailed
+          expr: |
+            kube_job_status_failed{
+              namespace="playerok-dev",
+              job_name=~"database-backups-.*"
+            } > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok database backup job failed
+            description: The independent database-backups CronJob has a failed Job in playerok-dev.
+            runbook_url: https://github.com/Sunkist228/k8s-gitops/blob/main/apps/backups/README.md#recovery-checks
+        - alert: PlayerokDatabaseBackupsStale
+          expr: |
+            (
+              time() - kube_cronjob_status_last_successful_time{
+                namespace="playerok-dev",
+                cronjob="database-backups"
+              } > 93600
+            )
+            or
+            absent(kube_cronjob_status_last_successful_time{
+              namespace="playerok-dev",
+              cronjob="database-backups"
+            })
+          for: 30m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok database backups are stale
+            description: The independent database-backups CronJob has no successful run within 26 hours.
+            runbook_url: https://github.com/Sunkist228/k8s-gitops/blob/main/apps/backups/README.md#recovery-checks

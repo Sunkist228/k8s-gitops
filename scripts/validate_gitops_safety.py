@@ -46,6 +46,7 @@ REQUIRED_KV_GROUP_PDBS = {
 MAX_EXTERNAL_SECRET_REFRESH_SECONDS = 300
 
 BACKUPS_PORTABASE_RESOURCES = {
+    "database-backups.yaml",
     "portabase.yaml",
 }
 
@@ -306,6 +307,60 @@ def assert_portabase_uses_reachable_canonical_url() -> list[str]:
     return errors
 
 
+def assert_backup_runtime_hardening() -> list[str]:
+    errors: list[str] = []
+    portabase_manifest = ROOT / "apps" / "backups" / "portabase.yaml"
+    backup_manifest = ROOT / "apps" / "backups" / "database-backups.yaml"
+
+    if portabase_manifest.is_file():
+        docs = load_all(portabase_manifest)
+        deployments = {
+            doc.get("metadata", {}).get("name"): doc
+            for doc in docs
+            if doc.get("kind") == "Deployment"
+        }
+        agent = deployments.get("portabase-agent")
+        if agent is None:
+            errors.append("backups: missing Deployment/portabase-agent")
+        else:
+            containers = agent.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+            container = next((item for item in containers if item.get("name") == "portabase-agent"), None)
+            if container is None:
+                errors.append("backups: missing portabase-agent container")
+            else:
+                env = {
+                    item.get("name"): item.get("value")
+                    for item in container.get("env", [])
+                    if "value" in item
+                }
+                if env.get("LOG") != "warn":
+                    errors.append("backups: portabase-agent LOG must remain warn until task metadata is redacted")
+                for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
+                    if probe not in container:
+                        errors.append(f"backups: portabase-agent missing {probe}")
+
+        for name, deployment in deployments.items():
+            containers = deployment.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+            for container in containers:
+                image = str(container.get("image", ""))
+                if image.startswith("portabase/") and (image.endswith(":latest") or "@sha256:" not in image):
+                    errors.append(f"backups: Deployment/{name} must pin Portabase image by digest")
+
+    if backup_manifest.is_file():
+        docs = load_all(backup_manifest)
+        cronjob = next((doc for doc in docs if doc.get("kind") == "CronJob"), None)
+        if cronjob is None:
+            errors.append("backups: missing CronJob/database-backups")
+        else:
+            spec = cronjob.get("spec", {})
+            if spec.get("suspend") is True:
+                errors.append("backups: CronJob/database-backups must not be suspended")
+            if spec.get("concurrencyPolicy") != "Forbid":
+                errors.append("backups: CronJob/database-backups concurrencyPolicy must be Forbid")
+
+    return errors
+
+
 def main() -> int:
     errors = (
         assert_application_safety()
@@ -313,6 +368,7 @@ def main() -> int:
         + assert_external_secret_recovery_safety()
         + assert_portabase_backups_app_is_isolated()
         + assert_portabase_uses_reachable_canonical_url()
+        + assert_backup_runtime_hardening()
     )
     if errors:
         for error in errors:

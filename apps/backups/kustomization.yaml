@@ -5,3 +5,4 @@ namespace: playerok-dev
 
 resources:
   - portabase.yaml
+  - database-backups.yaml
