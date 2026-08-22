@@ -2,18 +2,20 @@
 
 Argo CD Application: `backups`
 
-This app owns the Portabase dashboard and in-cluster backup agent for the Playerok dev contour. It deploys into the existing `playerok-dev` namespace so the service names, PVC names, ingress hostnames, and secret references stay stable during the Argo app split.
+This app adopts the legacy `database-backups` CronJob and its existing PVC in
+the `playerok-dev` namespace. The CronJob is an independent safety net:
+Portabase remains the primary scheduler, while the CronJob creates daily
+PostgreSQL dumps even if the dashboard is down.
 
-It also adopts the legacy `database-backups` CronJob and its existing PVC. The
-CronJob is an independent safety net: Portabase remains the primary scheduler,
-while the CronJob creates daily PostgreSQL dumps even if the dashboard is down.
+Portabase itself intentionally remains owned by `Application/playerok-dev`.
+Moving its deployments and PVCs between two auto-sync applications needs a
+separate two-phase ownership transfer; doing that in the same revision risks
+the old application pruning persistent resources before the new application
+adopts them.
 
-Required namespace secrets:
+Required namespace secret:
 
-- `portabase-app-secret`: `PROJECT_SECRET`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- `portabase-credentials`: `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`
 - `database-backup-credentials`: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- `portabase-agent-credentials`: `EDGE_KEY`
 
 Keep secret values in Vault/External Secrets. Do not add plaintext or base64 secret payloads to this repository.
 

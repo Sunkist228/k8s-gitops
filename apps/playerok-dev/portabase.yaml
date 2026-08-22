@@ -1,4 +1,4 @@
-# Backups app: Portabase dashboard and in-cluster backup agent.
+# Dev contour: Portabase dashboard and in-cluster backup agent.
 # Requires namespace `playerok-dev` secrets:
 # - `portabase-app-secret`: PROJECT_SECRET, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 # - `portabase-credentials`: PGADMIN_DEFAULT_EMAIL, PGADMIN_DEFAULT_PASSWORD

@@ -45,9 +45,8 @@ REQUIRED_KV_GROUP_PDBS = {
 
 MAX_EXTERNAL_SECRET_REFRESH_SECONDS = 300
 
-BACKUPS_PORTABASE_RESOURCES = {
+BACKUPS_RESOURCES = {
     "database-backups.yaml",
-    "portabase.yaml",
 }
 
 BACKUPS_PORTABASE_URL = "https://portabase.devflux.ru"
@@ -218,7 +217,7 @@ def assert_external_secret_recovery_safety() -> list[str]:
     return errors
 
 
-def assert_portabase_backups_app_is_isolated() -> list[str]:
+def assert_backup_app_is_isolated() -> list[str]:
     errors: list[str] = []
     app_docs = load_all(ROOT / "bootstrap" / "apps" / "apps.yaml")
     backups_app = next(
@@ -243,11 +242,11 @@ def assert_portabase_backups_app_is_isolated() -> list[str]:
             errors.append("backups: Application destination.namespace must be playerok-dev")
 
     playerok_kustomization = ROOT / "apps" / "playerok-dev" / "kustomization.yaml"
-    if "portabase.yaml" in playerok_kustomization.read_text(encoding="utf-8"):
-        errors.append("playerok-dev: portabase.yaml must move to apps/backups")
+    if "portabase.yaml" not in playerok_kustomization.read_text(encoding="utf-8"):
+        errors.append("playerok-dev: portabase.yaml must remain owned by playerok-dev")
 
-    if (ROOT / "apps" / "playerok-dev" / "portabase.yaml").exists():
-        errors.append("playerok-dev: portabase.yaml must not remain under apps/playerok-dev")
+    if not (ROOT / "apps" / "playerok-dev" / "portabase.yaml").is_file():
+        errors.append("playerok-dev: missing apps/playerok-dev/portabase.yaml")
 
     backups_kustomization = ROOT / "apps" / "backups" / "kustomization.yaml"
     if not backups_kustomization.is_file():
@@ -255,9 +254,11 @@ def assert_portabase_backups_app_is_isolated() -> list[str]:
     else:
         kustomization = yaml.safe_load(backups_kustomization.read_text(encoding="utf-8")) or {}
         resources = set(kustomization.get("resources", []) or [])
-        missing_resources = sorted(BACKUPS_PORTABASE_RESOURCES - resources)
+        missing_resources = sorted(BACKUPS_RESOURCES - resources)
         if missing_resources:
             errors.append(f"backups: missing resources: {', '.join(missing_resources)}")
+        if "portabase.yaml" in resources:
+            errors.append("backups: Portabase ownership transfer must not happen in this revision")
         if kustomization.get("namespace") != "playerok-dev":
             errors.append("backups: kustomization namespace must be playerok-dev")
 
@@ -266,7 +267,7 @@ def assert_portabase_backups_app_is_isolated() -> list[str]:
 
 def assert_portabase_uses_reachable_canonical_url() -> list[str]:
     errors: list[str] = []
-    portabase_manifest = ROOT / "apps" / "backups" / "portabase.yaml"
+    portabase_manifest = ROOT / "apps" / "playerok-dev" / "portabase.yaml"
     if not portabase_manifest.is_file():
         return errors
 
@@ -309,7 +310,7 @@ def assert_portabase_uses_reachable_canonical_url() -> list[str]:
 
 def assert_backup_runtime_hardening() -> list[str]:
     errors: list[str] = []
-    portabase_manifest = ROOT / "apps" / "backups" / "portabase.yaml"
+    portabase_manifest = ROOT / "apps" / "playerok-dev" / "portabase.yaml"
     backup_manifest = ROOT / "apps" / "backups" / "database-backups.yaml"
 
     if portabase_manifest.is_file():
@@ -366,7 +367,7 @@ def main() -> int:
         assert_application_safety()
         + assert_kv_group_rollout_safety()
         + assert_external_secret_recovery_safety()
-        + assert_portabase_backups_app_is_isolated()
+        + assert_backup_app_is_isolated()
         + assert_portabase_uses_reachable_canonical_url()
         + assert_backup_runtime_hardening()
     )
