@@ -9,6 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 WORKLOAD_APPS = {
+    "backups",
     "home-assistant",
     "n8n",
     "father-testing",
@@ -25,6 +26,7 @@ WORKLOAD_APPS = {
 }
 
 AUTOMATED_WORKLOAD_APPS = {
+    "backups",
     "playerok-dev",
     "playerok-pre-dev",
 }
@@ -42,6 +44,16 @@ REQUIRED_KV_GROUP_PDBS = {
 }
 
 MAX_EXTERNAL_SECRET_REFRESH_SECONDS = 300
+
+BACKUPS_RESOURCES = {
+    "database-backups.yaml",
+}
+
+BACKUPS_PORTABASE_URL = "https://portabase.devflux.ru"
+BACKUPS_FORBIDDEN_PORTABASE_URLS = {
+    "portabase.dev.devflux.ru",
+    "https://portabase.dev.devflux.ru",
+}
 
 
 def parse_duration_seconds(value: str) -> int | None:
@@ -205,11 +217,159 @@ def assert_external_secret_recovery_safety() -> list[str]:
     return errors
 
 
+def assert_backup_app_is_isolated() -> list[str]:
+    errors: list[str] = []
+    app_docs = load_all(ROOT / "bootstrap" / "apps" / "apps.yaml")
+    backups_app = next(
+        (
+            doc
+            for doc in app_docs
+            if doc.get("kind") == "Application"
+            and doc.get("metadata", {}).get("name") == "backups"
+        ),
+        None,
+    )
+
+    if backups_app is None:
+        errors.append("backups: missing Argo CD Application registration")
+    else:
+        spec = backups_app.get("spec", {})
+        source = spec.get("source", {})
+        destination = spec.get("destination", {})
+        if source.get("path") != "apps/backups":
+            errors.append("backups: Application source.path must be apps/backups")
+        if destination.get("namespace") != "playerok-dev":
+            errors.append("backups: Application destination.namespace must be playerok-dev")
+
+    playerok_kustomization = ROOT / "apps" / "playerok-dev" / "kustomization.yaml"
+    if "portabase.yaml" not in playerok_kustomization.read_text(encoding="utf-8"):
+        errors.append("playerok-dev: portabase.yaml must remain owned by playerok-dev")
+
+    if not (ROOT / "apps" / "playerok-dev" / "portabase.yaml").is_file():
+        errors.append("playerok-dev: missing apps/playerok-dev/portabase.yaml")
+
+    backups_kustomization = ROOT / "apps" / "backups" / "kustomization.yaml"
+    if not backups_kustomization.is_file():
+        errors.append("backups: missing apps/backups/kustomization.yaml")
+    else:
+        kustomization = yaml.safe_load(backups_kustomization.read_text(encoding="utf-8")) or {}
+        resources = set(kustomization.get("resources", []) or [])
+        missing_resources = sorted(BACKUPS_RESOURCES - resources)
+        if missing_resources:
+            errors.append(f"backups: missing resources: {', '.join(missing_resources)}")
+        if "portabase.yaml" in resources:
+            errors.append("backups: Portabase ownership transfer must not happen in this revision")
+        if kustomization.get("namespace") != "playerok-dev":
+            errors.append("backups: kustomization namespace must be playerok-dev")
+
+    return errors
+
+
+def assert_portabase_uses_reachable_canonical_url() -> list[str]:
+    errors: list[str] = []
+    portabase_manifest = ROOT / "apps" / "playerok-dev" / "portabase.yaml"
+    if not portabase_manifest.is_file():
+        return errors
+
+    docs = load_all(portabase_manifest)
+    deployment = next(
+        (
+            doc
+            for doc in docs
+            if doc.get("kind") == "Deployment"
+            and doc.get("metadata", {}).get("name") == "portabase"
+        ),
+        None,
+    )
+    if deployment is None:
+        errors.append("backups: missing Deployment/portabase")
+        return errors
+
+    containers = deployment.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+    container = next((item for item in containers if item.get("name") == "portabase"), None)
+    if container is None:
+        errors.append("backups: missing portabase container")
+        return errors
+
+    env = {
+        item.get("name"): item.get("value")
+        for item in container.get("env", [])
+        if "value" in item
+    }
+    for name in ("PROJECT_URL", "TRUSTED_DOMAINS"):
+        if env.get(name) != BACKUPS_PORTABASE_URL:
+            errors.append(f"backups: {name} must be {BACKUPS_PORTABASE_URL}")
+
+    manifest_text = portabase_manifest.read_text(encoding="utf-8")
+    for forbidden_url in sorted(BACKUPS_FORBIDDEN_PORTABASE_URLS):
+        if forbidden_url in manifest_text:
+            errors.append(f"backups: forbidden non-resolving URL remains: {forbidden_url}")
+
+    return errors
+
+
+def assert_backup_runtime_hardening() -> list[str]:
+    errors: list[str] = []
+    portabase_manifest = ROOT / "apps" / "playerok-dev" / "portabase.yaml"
+    backup_manifest = ROOT / "apps" / "backups" / "database-backups.yaml"
+
+    if portabase_manifest.is_file():
+        docs = load_all(portabase_manifest)
+        deployments = {
+            doc.get("metadata", {}).get("name"): doc
+            for doc in docs
+            if doc.get("kind") == "Deployment"
+        }
+        agent = deployments.get("portabase-agent")
+        if agent is None:
+            errors.append("backups: missing Deployment/portabase-agent")
+        else:
+            containers = agent.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+            container = next((item for item in containers if item.get("name") == "portabase-agent"), None)
+            if container is None:
+                errors.append("backups: missing portabase-agent container")
+            else:
+                env = {
+                    item.get("name"): item.get("value")
+                    for item in container.get("env", [])
+                    if "value" in item
+                }
+                if env.get("LOG") != "warn":
+                    errors.append("backups: portabase-agent LOG must remain warn until task metadata is redacted")
+                for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
+                    if probe not in container:
+                        errors.append(f"backups: portabase-agent missing {probe}")
+
+        for name, deployment in deployments.items():
+            containers = deployment.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+            for container in containers:
+                image = str(container.get("image", ""))
+                if image.startswith("portabase/") and (image.endswith(":latest") or "@sha256:" not in image):
+                    errors.append(f"backups: Deployment/{name} must pin Portabase image by digest")
+
+    if backup_manifest.is_file():
+        docs = load_all(backup_manifest)
+        cronjob = next((doc for doc in docs if doc.get("kind") == "CronJob"), None)
+        if cronjob is None:
+            errors.append("backups: missing CronJob/database-backups")
+        else:
+            spec = cronjob.get("spec", {})
+            if spec.get("suspend") is True:
+                errors.append("backups: CronJob/database-backups must not be suspended")
+            if spec.get("concurrencyPolicy") != "Forbid":
+                errors.append("backups: CronJob/database-backups concurrencyPolicy must be Forbid")
+
+    return errors
+
+
 def main() -> int:
     errors = (
         assert_application_safety()
         + assert_kv_group_rollout_safety()
         + assert_external_secret_recovery_safety()
+        + assert_backup_app_is_isolated()
+        + assert_portabase_uses_reachable_canonical_url()
+        + assert_backup_runtime_hardening()
     )
     if errors:
         for error in errors:

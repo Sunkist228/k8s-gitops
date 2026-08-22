@@ -1,4 +1,4 @@
-# Dev contour: Portabase dashboard and in-cluster agent.
+# Dev contour: Portabase dashboard and in-cluster backup agent.
 # Requires namespace `playerok-dev` secrets:
 # - `portabase-app-secret`: PROJECT_SECRET, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 # - `portabase-credentials`: PGADMIN_DEFAULT_EMAIL, PGADMIN_DEFAULT_PASSWORD
@@ -109,8 +109,8 @@ spec:
         - name: harbor-registry
       containers:
         - name: portabase
-          image: portabase/portabase:latest
-          imagePullPolicy: Always
+          image: portabase/portabase@sha256:6c89286e06e61e3b0cd501ef93dea5dc52744db7c64547f5a0c70bfc81f381d7
+          imagePullPolicy: IfNotPresent
           env:
             - name: TZ
               value: Europe/Moscow
@@ -274,13 +274,13 @@ spec:
               memory: 128Mi
       containers:
         - name: portabase-agent
-          image: portabase/agent:latest
-          imagePullPolicy: Always
+          image: portabase/agent@sha256:9a57cb6470bcf4e7583953d6ab576ab4ba414e57498d38e03c6805e926cc3ab0
+          imagePullPolicy: IfNotPresent
           env:
             - name: TZ
               value: Europe/Moscow
             - name: POLLING
-              value: "5"
+              value: "30"
             - name: APP_ENV
               value: production
             - name: DATA_PATH
@@ -288,7 +288,9 @@ spec:
             - name: DATABASES_CONFIG_FILE
               value: /config/config.json
             - name: LOG
-              value: info
+              # INFO currently includes decrypted task metadata from storage
+              # channels. Keep warning-level logs until upstream redacts it.
+              value: warn
             - name: EDGE_KEY
               valueFrom:
                 secretKeyRef:
@@ -307,6 +309,33 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test -s /data/config/config.json
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test -s /data/config/config.json && kill -0 1
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - kill -0 1
+            periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 3
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

@@ -8,7 +8,8 @@ until the change is reviewed and synced intentionally.
 ## Current Guardrails
 
 - Workload Argo CD Applications in `bootstrap/apps/apps.yaml` must not contain
-  `spec.syncPolicy.automated`.
+  `spec.syncPolicy.automated`, except for explicitly validated dev operational
+  apps: `playerok-dev`, `playerok-pre-dev`, and `backups`.
 - `bootstrap/apps/apps.yaml` is the only App-of-Apps child registry; separate
   duplicate `Application` files under `bootstrap/apps/` are blocked.
 - All Applications use `PruneLast=true`, `ApplyOutOfSyncOnly=true`, and
