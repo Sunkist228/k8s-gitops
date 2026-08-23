@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: outline
+  labels:
+    app.kubernetes.io/name: outline
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "250m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: public
+  tls:
+    - hosts:
+        - outline.deflux.ru
+      secretName: outline-deflux-ru-tls
+  rules:
+    - host: outline.deflux.ru
+      http:
+        paths:
+          - path: /dex
+            pathType: Prefix
+            backend:
+              service:
+                name: outline-dex
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: outline
+                port:
+                  name: http

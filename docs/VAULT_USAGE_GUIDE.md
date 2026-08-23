@@ -122,6 +122,9 @@ path "secret/data/databases/*" {
 path "secret/data/openclaw/*" {
   capabilities = ["read"]
 }
+path "secret/data/outline/*" {
+  capabilities = ["read"]
+}
 ```
 
 Reference file in this repo:
@@ -161,6 +164,8 @@ Important rules:
    - `vault kv put secret/databases/obsidian-sync COUCHDB_USER="admin" COUCHDB_PASSWORD="<ADMIN_PASSWORD>" COUCHDB_SECRET="<COOKIE_SECRET>" OBSIDIAN_DB="obsidian" OBSIDIAN_USER="obsidian_sync" OBSIDIAN_PASSWORD="<OBSIDIAN_PASSWORD>" AI_READER_USER="ai_reader" AI_READER_PASSWORD="<AI_READER_PASSWORD>" AI_WRITER_USER="ai_writer" AI_WRITER_PASSWORD="<AI_WRITER_PASSWORD>"`
 9. OpenClaw VPN subscription:
    - `vault kv put secret/openclaw/proxy subscription_url="<SUBSCRIPTION_URL>"`
+10. Outline:
+   - `vault kv put secret/outline/config SECRET_KEY="<SECRET_KEY>" UTILS_SECRET="<UTILS_SECRET>" POSTGRES_PASSWORD="<POSTGRES_PASSWORD>" DATABASE_URL="<DATABASE_URL>" OIDC_CLIENT_SECRET="<OIDC_CLIENT_SECRET>" DEX_CONFIG="<DEX_CONFIG_YAML>"`
 
 ### Verify a secret
 

@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outline
+  labels:
+    app.kubernetes.io/name: outline
+    app.kubernetes.io/component: application
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: outline
+      app.kubernetes.io/component: application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: outline
+        app.kubernetes.io/component: application
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:18
+          command:
+            - sh
+            - -c
+            - until pg_isready -h outline-postgres -U outline -d outline; do sleep 2; done
+        - name: wait-for-redis
+          image: redis:8.10.1
+          command:
+            - sh
+            - -c
+            - until redis-cli -h outline-redis ping | grep -q PONG; do sleep 2; done
+      containers:
+        - name: outline
+          image: outlinewiki/outline:1.9.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: URL
+              value: https://outline.deflux.ru
+            - name: PORT
+              value: "3000"
+            - name: WEB_CONCURRENCY
+              value: "1"
+            - name: DEFAULT_LANGUAGE
+              value: ru_RU
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: outline-secrets
+                  key: SECRET_KEY
+            - name: UTILS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: outline-secrets
+                  key: UTILS_SECRET
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: outline-secrets
+                  key: DATABASE_URL
+            - name: PGSSLMODE
+              value: disable
+            - name: REDIS_URL
+              value: redis://outline-redis:6379
+            - name: FILE_STORAGE
+              value: local
+            - name: FILE_STORAGE_LOCAL_ROOT_DIR
+              value: /var/lib/outline/data
+            - name: FILE_STORAGE_UPLOAD_MAX_SIZE
+              value: "262144000"
+            - name: FORCE_HTTPS
+              value: "true"
+            - name: PROXY_HEADERS_TRUSTED
+              value: "true"
+            - name: OIDC_CLIENT_ID
+              value: outline
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: outline-secrets
+                  key: OIDC_CLIENT_SECRET
+            - name: OIDC_AUTH_URI
+              value: https://outline.deflux.ru/dex/auth
+            - name: OIDC_TOKEN_URI
+              value: http://outline-dex:5556/dex/token
+            - name: OIDC_USERINFO_URI
+              value: http://outline-dex:5556/dex/userinfo
+            - name: OIDC_DISPLAY_NAME
+              value: Локальная учётная запись
+            - name: OIDC_USERNAME_CLAIM
+              value: preferred_username
+            - name: OIDC_SCOPES
+              value: openid profile email
+            - name: OIDC_DISABLE_REDIRECT
+              value: "true"
+            - name: ALLOWED_PRIVATE_IP_ADDRESSES
+              value: 10.152.183.0/24
+            - name: RATE_LIMITER_ENABLED
+              value: "true"
+            - name: ENABLE_UPDATES
+              value: "false"
+            - name: OAUTH_DISABLE_DCR
+              value: "true"
+            - name: LOG_LEVEL
+              value: info
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/outline/data
+          startupProbe:
+            httpGet:
+              path: /_health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 1536Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: outline-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: outline
+  labels:
+    app.kubernetes.io/name: outline
+    app.kubernetes.io/component: application
+spec:
+  selector:
+    app.kubernetes.io/name: outline
+    app.kubernetes.io/component: application
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
