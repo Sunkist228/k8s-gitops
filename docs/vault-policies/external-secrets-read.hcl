@@ -30,6 +30,10 @@ path "secret/data/openclaw/*" {
   capabilities = ["read"]
 }
 
+path "secret/data/outline/*" {
+  capabilities = ["read"]
+}
+
 path "secret/data/home-assistant/*" {
   capabilities = ["read"]
 }

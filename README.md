@@ -10,6 +10,7 @@ This repository implements the GitOps pattern for managing a Kubernetes cluster 
   - `external-secrets-config/`: Vault ClusterSecretStore configuration.
   - `home-assistant/`: Home Assistant deployment.
   - `n8n/`: n8n automation tool deployment.
+  - `outline/`: Outline knowledge base with PostgreSQL, Redis, Dex, and persistent local storage.
   - `postgres/`: PostgreSQL StatefulSet and related resources.
   - `couchdb/`: CouchDB deployment and ingress.
   - `vault/`: Vendored HashiCorp Vault Helm chart + local values (HA Raft mode).

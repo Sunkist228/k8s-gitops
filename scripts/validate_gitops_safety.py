@@ -12,6 +12,7 @@ WORKLOAD_APPS = {
     "backups",
     "home-assistant",
     "n8n",
+    "outline",
     "father-testing",
     "ingress-api",
     "playerok-dev",

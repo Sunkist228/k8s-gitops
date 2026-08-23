@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: outline-postgres
+  labels:
+    app.kubernetes.io/name: outline
+    app.kubernetes.io/component: database
+spec:
+  serviceName: outline-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: outline
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: outline
+        app.kubernetes.io/component: database
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: outline
+            - name: POSTGRES_DB
+              value: outline
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: outline-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U outline -d outline"]
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U outline -d outline"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U outline -d outline"]
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: outline-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: outline-postgres
+  labels:
+    app.kubernetes.io/name: outline
+    app.kubernetes.io/component: database
+spec:
+  selector:
+    app.kubernetes.io/name: outline
+    app.kubernetes.io/component: database
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
