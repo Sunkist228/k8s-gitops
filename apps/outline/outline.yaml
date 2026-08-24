@@ -48,7 +48,7 @@ spec:
             - name: NODE_ENV
               value: production
             - name: URL
-              value: https://outline.deflux.ru
+              value: https://outline.devflux.ru
             - name: PORT
               value: "3000"
             - name: WEB_CONCURRENCY
@@ -92,7 +92,7 @@ spec:
                   name: outline-secrets
                   key: OIDC_CLIENT_SECRET
             - name: OIDC_AUTH_URI
-              value: https://outline.deflux.ru/dex/auth
+              value: https://outline.devflux.ru/dex/auth
             - name: OIDC_TOKEN_URI
               value: http://outline-dex:5556/dex/token
             - name: OIDC_USERINFO_URI
