@@ -54,7 +54,7 @@ spec:
             - name: WEB_CONCURRENCY
               value: "1"
             - name: DEFAULT_LANGUAGE
-              value: ru_RU
+              value: en_US
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
