@@ -14,10 +14,10 @@ spec:
   ingressClassName: public
   tls:
     - hosts:
-        - outline.deflux.ru
-      secretName: outline-deflux-ru-tls
+        - outline.devflux.ru
+      secretName: outline-devflux-ru-tls
   rules:
-    - host: outline.deflux.ru
+    - host: outline.devflux.ru
       http:
         paths:
           - path: /dex

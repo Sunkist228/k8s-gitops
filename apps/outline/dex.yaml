@@ -21,6 +21,28 @@ spec:
     spec:
       securityContext:
         fsGroup: 1001
+      initContainers:
+        - name: render-config
+          image: ghcr.io/dexidp/dex:v2.45.1-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-ec"]
+          args:
+            - |
+              sed 's/outline\.deflux\.ru/outline.devflux.ru/g' /source/config.yaml > /rendered/config.yaml
+              chmod 0440 /rendered/config.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1001
+          volumeMounts:
+            - name: config-source
+              mountPath: /source
+              readOnly: true
+            - name: config
+              mountPath: /rendered
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:v2.45.1-alpine
@@ -62,12 +84,14 @@ spec:
               cpu: 500m
               memory: 256Mi
       volumes:
-        - name: config
+        - name: config-source
           secret:
             secretName: outline-secrets
             items:
               - key: DEX_CONFIG
                 path: config.yaml
+        - name: config
+          emptyDir: {}
         - name: data
           persistentVolumeClaim:
             claimName: outline-dex-data
