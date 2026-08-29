@@ -24,29 +24,7 @@ spec:
                 name: uptime-kuma
                 port:
                   number: 3001
-    - host: status.dev.devflux.ru
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: uptime-kuma
-                port:
-                  number: 3001
-    - host: client-metrics.playerok-devflux.dev.devflux.ru
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: uptime-kuma
-                port:
-                  number: 3001
   tls:
     - secretName: uptime-kuma-client-metrics-tls
       hosts:
         - status.devflux.ru
-        - status.dev.devflux.ru
-        - client-metrics.playerok-devflux.dev.devflux.ru
