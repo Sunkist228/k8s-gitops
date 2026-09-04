@@ -11,11 +11,14 @@ resources:
   - portabase.yaml
   - deployment-backend.yaml
   - deployment-email-worker.yaml
+  - deployment-playerok-metadata-collector.yaml
   - deployment-artifact-server.yaml
   - deployment-frontend.yaml
   - service-backend.yaml
+  - service-playerok-metadata-collector.yaml
   - service-artifact-server.yaml
   - service-frontend.yaml
   - ingress-frontend.yaml
   - ingress-artifact-server.yaml
   - job-backend-migrations.yaml
+  - config-playerok-metadata-collector.yaml
