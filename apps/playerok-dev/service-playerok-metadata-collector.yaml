@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: playerok-metadata-collector-metrics
+  labels:
+    app: playerok-metadata-collector
+    environment: dev
+    component: worker
+    monitoring.devflux.io/enabled: "true"
+spec:
+  selector:
+    app: playerok-metadata-collector
+    environment: dev
+  ports:
+    - name: metrics
+      port: 9102
+      targetPort: metrics

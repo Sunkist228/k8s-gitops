@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playerok-metadata-collector
+  labels:
+    app: playerok-metadata-collector
+    environment: dev
+    component: worker
+spec:
+  # Bootstrap only. Scale to one after the immutable image and Vault keys exist.
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: playerok-metadata-collector
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: playerok-metadata-collector
+        environment: dev
+        component: worker
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: playerok-metadata-collector
+          image: harbor.devflux.ru/playerok-devflux/playerok-metadata-collector-dev:replace-after-feature-build
+          imagePullPolicy: Always
+          ports:
+            - name: metrics
+              containerPort: 9102
+          envFrom:
+            - configMapRef:
+                name: playerok-metadata-collector
+            - secretRef:
+                name: playerok-metadata-collector
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 384Mi
+              cpu: 500m
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 15
+            periodSeconds: 20
