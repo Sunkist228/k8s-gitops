@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: playerok-metadata-collector
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: playerok
+    component: metadata-collector
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  namespaceSelector:
+    matchNames:
+      - playerok-dev
+  selector:
+    matchLabels:
+      app: playerok-metadata-collector
+      environment: dev
+      monitoring.devflux.io/enabled: "true"
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

@@ -139,6 +139,36 @@ spec:
             summary: Playerok backend deployment has unavailable replicas
             description: Deployment "backend" in namespace "playerok-dev" has unavailable replicas for 5 minutes.
             runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/monitoring.md#alerts
+        - alert: PlayerokMetadataCollectorDeploymentUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace="playerok-dev", deployment="playerok-metadata-collector"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: playerok
+          annotations:
+            summary: Playerok metadata collector deployment is unavailable
+            description: The metadata collector has an unavailable replica in playerok-dev for 5 minutes.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/playerok-metadata.md#проверка-после-доставки
+        - alert: PlayerokMetadataCatalogTooOld
+          expr: time() - max(playerok_metadata_collector_last_success_timestamp_seconds{namespace="playerok-dev"}) > 7200 or absent(playerok_metadata_collector_last_success_timestamp_seconds{namespace="playerok-dev"})
+          for: 15m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Shared Playerok catalog has not been refreshed for two hours
+            description: Check the metadata collector, Backend ingest API, technical Playerok credential, and refresh queue.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/playerok-metadata.md#метрики-и-алерты
+        - alert: PlayerokMetadataSchemaCoverageEmpty
+          expr: max(playerok_metadata_schemas{namespace="playerok-dev", state="known", locale="ru"}) < 1 or absent(playerok_metadata_schemas{namespace="playerok-dev", state="known", locale="ru"})
+          for: 30m
+          labels:
+            severity: warning
+            team: playerok
+          annotations:
+            summary: Shared Playerok schema coverage is empty
+            description: Backend has no valid ru category schema snapshots. Check collector runs and ingest errors.
+            runbook_url: https://github.com/Sunkist228/Playerok-devflux/blob/develop/docs/playerok-metadata.md#метрики-и-алерты
         - alert: PlayerokArtifactServerDeploymentUnavailable
           expr: kube_deployment_status_replicas_unavailable{namespace="playerok-dev", deployment="artifact-server"} > 0
           for: 5m

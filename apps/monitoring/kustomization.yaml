@@ -10,6 +10,7 @@ resources:
   - servicemonitors/jenkins-notify-servicemonitor.yaml
   - servicemonitors/ingress-api-servicemonitor.yaml
   - servicemonitors/playerok-backend-servicemonitor.yaml
+  - servicemonitors/playerok-metadata-collector-servicemonitor.yaml
   - servicemonitors/playerok-prod-servicemonitor.yaml
   - servicemonitors/stalwart-servicemonitor.yaml
   - rules/playerok-rules.yaml
