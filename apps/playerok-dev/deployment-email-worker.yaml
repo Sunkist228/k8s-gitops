@@ -26,7 +26,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: email-worker
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.59.0-dev.576-sha.16d3e4f91233
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.60.0-dev.578-sha.01a348390f2d
           imagePullPolicy: Always
           command: ["/opt/venv/bin/python", "-m", "backend_app.workers.email_worker"]
           ports:
