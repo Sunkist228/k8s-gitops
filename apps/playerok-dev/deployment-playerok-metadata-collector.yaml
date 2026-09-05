@@ -29,7 +29,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: playerok-metadata-collector
-          image: harbor.devflux.ru/playerok-devflux/playerok-metadata-collector-dev:replace-after-feature-build
+          image: harbor.devflux.ru/playerok-devflux/playerok-metadata-collector-dev:v0.58.0-dev.570-sha.da6f5f249846
           imagePullPolicy: Always
           ports:
             - name: metrics
