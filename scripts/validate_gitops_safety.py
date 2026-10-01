@@ -9,6 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 WORKLOAD_APPS = {
+    "harbor-database",
     "backups",
     "home-assistant",
     "n8n",
@@ -363,6 +364,46 @@ def assert_backup_runtime_hardening() -> list[str]:
     return errors
 
 
+def assert_harbor_database_safety() -> list[str]:
+    errors: list[str] = []
+    docs = load_all(ROOT / "apps" / "harbor-database" / "statefulset.yaml")
+    database = next((doc for doc in docs if doc.get("kind") == "StatefulSet"), {})
+    spec = database.get("spec", {})
+    if app_name(database) != "harbor-database" or spec.get("serviceName") != "harbor-database":
+        errors.append("harbor-database: keep the existing StatefulSet and Service identity")
+    retention = spec.get("persistentVolumeClaimRetentionPolicy", {})
+    if retention != {"whenDeleted": "Retain", "whenScaled": "Retain"}:
+        errors.append("harbor-database: retain PVCs on deletion and scale-down")
+    options = database.get("metadata", {}).get("annotations", {}).get("argocd.argoproj.io/sync-options", "")
+    if not {"Prune=false", "Delete=false"} <= set(options.split(",")):
+        errors.append("harbor-database: prevent Argo CD pruning or deleting the database")
+    claims = spec.get("volumeClaimTemplates", [])
+    if len(claims) != 1 or claims[0].get("metadata", {}).get("name") != "database-data":
+        errors.append("harbor-database: preserve the database-data PVC template")
+    containers = spec.get("template", {}).get("spec", {}).get("containers", [])
+    container = next((item for item in containers if item.get("name") == "database"), {})
+    if not container.get("resources", {}).get("requests", {}).get("cpu"):
+        errors.append("harbor-database: reserve CPU for database and health checks")
+    if not container.get("resources", {}).get("requests", {}).get("memory"):
+        errors.append("harbor-database: reserve memory for PostgreSQL")
+    for name in ("startupProbe", "readinessProbe", "livenessProbe"):
+        probe = container.get(name, {})
+        command = probe.get("exec", {}).get("command", [])
+        timeout_args = [arg for arg in command if arg.startswith("--timeout=")]
+        timeout_value = timeout_args[0].split("=", 1)[1] if timeout_args else ""
+        inner_timeout = int(timeout_value) if timeout_value.isdigit() else 0
+        if not command or command[0] != "pg_isready" or inner_timeout <= 0:
+            errors.append(f"harbor-database: {name} must use bounded pg_isready")
+        if probe.get("timeoutSeconds", 0) < inner_timeout + 5:
+            errors.append(f"harbor-database: {name} must allow time for exec startup before killing it")
+        window = probe.get("failureThreshold", 0) * probe.get("periodSeconds", 0)
+        if name == "startupProbe" and window < 600:
+            errors.append("harbor-database: allow at least 10 minutes for startup recovery")
+        if name == "livenessProbe" and window < 60:
+            errors.append("harbor-database: tolerate at least 60 seconds of transient liveness failures")
+    return errors
+
+
 def main() -> int:
     errors = (
         assert_application_safety()
@@ -371,6 +412,7 @@ def main() -> int:
         + assert_backup_app_is_isolated()
         + assert_portabase_uses_reachable_canonical_url()
         + assert_backup_runtime_hardening()
+        + assert_harbor_database_safety()
     )
     if errors:
         for error in errors:
