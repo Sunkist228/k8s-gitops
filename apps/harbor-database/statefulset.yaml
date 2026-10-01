@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: StatefulSet
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: harbor
+      component: database
+      release: harbor
+  serviceName: harbor-database
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: database
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.13.2
+        chart: harbor
+        component: database
+        heritage: Helm
+        release: harbor
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        envFrom:
+        - secretRef:
+            name: harbor-database
+        image: goharbor/harbor-db:v2.13.2
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - kill -INT 1
+        livenessProbe:
+          initialDelaySeconds: 0
+          exec:
+            command:
+            - pg_isready
+            - --host=127.0.0.1
+            - --port=5432
+            - --username=postgres
+            - --dbname=registry
+            - --timeout=3
+          timeoutSeconds: 10
+          periodSeconds: 10
+          failureThreshold: 6
+          successThreshold: 1
+        name: database
+        readinessProbe:
+          initialDelaySeconds: 0
+          exec:
+            command:
+            - pg_isready
+            - --host=127.0.0.1
+            - --port=5432
+            - --username=postgres
+            - --dbname=registry
+            - --timeout=3
+          timeoutSeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: database-data
+        - mountPath: /dev/shm
+          name: shm-volume
+        startupProbe:
+          exec:
+            command:
+            - pg_isready
+            - --host=127.0.0.1
+            - --port=5432
+            - --username=postgres
+            - --dbname=registry
+            - --timeout=3
+          timeoutSeconds: 10
+          periodSeconds: 10
+          failureThreshold: 60
+          successThreshold: 1
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - args:
+        - -c
+        - chmod -R 700 /var/lib/postgresql/data/pgdata || true
+        command:
+        - /bin/sh
+        image: goharbor/harbor-db:v2.13.2
+        imagePullPolicy: IfNotPresent
+        name: data-permissions-ensurer
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: database-data
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+      terminationGracePeriodSeconds: 120
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+      volumes:
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 512Mi
+        name: shm-volume
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        app: harbor
+        chart: harbor
+        heritage: Helm
+        release: harbor
+      name: database-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+metadata:
+  name: harbor-database
+  namespace: devops-tools
+  labels:
+    app: harbor
+    app.kubernetes.io/component: database
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.13.2
+    chart: harbor
+    component: database
+    heritage: Helm
+    release: harbor
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
