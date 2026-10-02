@@ -28,8 +28,11 @@ spec:
           command: ["sh", "-ec"]
           args:
             - |
-              sed 's/outline\.deflux\.ru/outline.devflux.ru/g' /source/config.yaml > /rendered/config.yaml
-              chmod 0440 /rendered/config.yaml
+              config_tmp=$(mktemp /rendered/.config.yaml.XXXXXX)
+              trap 'rm -f "$config_tmp"' EXIT
+              sed 's/outline\.deflux\.ru/outline.devflux.ru/g' /source/config.yaml > "$config_tmp"
+              chmod 0440 "$config_tmp"
+              mv -f "$config_tmp" /rendered/config.yaml
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
