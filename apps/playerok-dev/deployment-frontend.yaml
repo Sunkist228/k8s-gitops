@@ -23,7 +23,7 @@ spec:
         - name: harbor-registry
       containers:
         - name: frontend
-          image: harbor.devflux.ru/playerok-devflux/frontend-dev:v0.68.0-dev.655-sha.58ff6230bd5d
+          image: harbor.devflux.ru/playerok-devflux/frontend-dev:v0.68.1-dev.659-sha.a639f427d226
           imagePullPolicy: Always
           env:
             - name: NGINX_RESOLVER
