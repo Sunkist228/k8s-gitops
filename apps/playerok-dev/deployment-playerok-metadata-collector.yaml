@@ -30,7 +30,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: playerok-metadata-collector
-          image: harbor.devflux.ru/playerok-devflux/playerok-metadata-collector-dev:v0.67.1-dev.648-sha.2f6967c8e32c
+          image: harbor.devflux.ru/playerok-devflux/playerok-metadata-collector-dev:v0.68.0-dev.654-sha.4ada8b93bc5f
           imagePullPolicy: Always
           ports:
             - name: metrics
