@@ -26,7 +26,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: email-worker
-          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.69.0-dev.671-sha.70f168ede719
+          image: harbor.devflux.ru/playerok-devflux/backend-dev:v0.72.0-dev.683-sha.1e317d6a38f1
           imagePullPolicy: Always
           command: ["/opt/venv/bin/python", "-m", "backend_app.workers.email_worker"]
           ports:
@@ -54,6 +54,9 @@ spec:
               port: metrics
             initialDelaySeconds: 15
             periodSeconds: 10
+          env:
+            - name: FRONTEND_URL
+              value: "https://dev.devflux.ru"
 ---
 apiVersion: v1
 kind: Service
