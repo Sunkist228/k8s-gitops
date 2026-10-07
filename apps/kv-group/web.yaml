@@ -54,6 +54,8 @@ spec:
               value: ""
             - name: API_INTERNAL_URL
               value: http://kv-group-api:8000
+            - name: YANDEX_METRIKA_ID
+              value: "113520651"
           startupProbe:
             httpGet:
               path: /
