@@ -15,6 +15,6 @@ resources:
 
 images:
   - name: harbor.devflux.ru/kv-group/api
-    newTag: 20-87d8e07f892e
+    newTag: 23-b4c4a1131718
   - name: harbor.devflux.ru/kv-group/web
-    newTag: 20-87d8e07f892e
+    newTag: 23-b4c4a1131718
