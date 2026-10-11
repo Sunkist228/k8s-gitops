@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kv-group-analytics
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: kv-group
+spec:
+  namespaceSelector:
+    matchNames: [kv-group]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kv-group-analytics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 60s
+      scrapeTimeout: 15s
