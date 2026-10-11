@@ -100,7 +100,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kv_leads_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"}",
+          "expr": "kv_leads_recent{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"}",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -152,7 +152,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kv_website_sessions_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"}",
+          "expr": "kv_website_sessions{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"}",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -204,7 +204,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kv_website_events_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\",kind=\"page_view\"}",
+          "expr": "kv_website_events{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\",kind=\"page_view\"}",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -256,7 +256,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "100 * kv_website_converted_sessions_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"} / (kv_website_sessions_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"} > 0)",
+          "expr": "100 * kv_website_converted_sessions{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"} / (kv_website_sessions{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\"} > 0)",
           "legendFormat": "",
           "refId": "A",
           "instant": true,
@@ -993,7 +993,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kv_website_sessions_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"24h\"}",
+          "expr": "kv_website_sessions{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"24h\"}",
           "legendFormat": "Посещения",
           "refId": "A",
           "instant": false,
@@ -1004,7 +1004,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kv_leads_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"24h\"}",
+          "expr": "kv_leads_recent{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"24h\"}",
           "legendFormat": "Заявки",
           "refId": "B",
           "range": true
@@ -1059,7 +1059,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kv_website_events_count{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\",kind!=\"page_view\"}",
+          "expr": "kv_website_events{namespace=\"kv-group\",service=\"kv-group-analytics\",window=\"$window\",kind!=\"page_view\"}",
           "legendFormat": "{{kind}}",
           "refId": "A",
           "instant": true,
