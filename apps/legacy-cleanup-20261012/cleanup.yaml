@@ -15,7 +15,7 @@ metadata:
     argocd.argoproj.io/sync-wave: '-20'
 data:
   cleanup.py: "import json,os,pathlib,ssl,time,urllib.error,urllib.request\n\nTOKEN=pathlib.Path('/var/run/secrets/kubernetes.io/serviceaccount/token').read_text().strip()\n\
-    BASE='https://'+os.environ['KUBERNETES_SERVICE_HOST']+':'+os.environ.get('KUBERNETES_SERVICE_PORT_HTTPS','443')\n\
+    BASE=os.environ.get('API_SERVER','https://'+os.environ['KUBERNETES_SERVICE_HOST']+':'+os.environ.get('KUBERNETES_SERVICE_PORT_HTTPS','443'))\n\
     SSL=ssl.create_default_context(cafile='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt')\n\
     def api(method,path,body=None,metadata=False):\n    headers={'Authorization':'Bearer\
     \ '+TOKEN,'Accept':'application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1'\
@@ -26,10 +26,12 @@ data:
     \ urllib.request.urlopen(req,context=SSL,timeout=15) as res:return json.load(res)\n\
     \        except urllib.error.HTTPError as e:\n            if e.code==404:return\
     \ None\n            if e.code not in [429,500,502,503,504]:raise RuntimeError(f'{method}\
-    \ {path}: HTTP {e.code}') from None\n        except (TimeoutError,urllib.error.URLError):pass\n\
-    \        time.sleep(2+attempt)\n    raise RuntimeError(f'{method} {path}: API\
-    \ unavailable')\n\ndef remove(path):\n    obj=api('GET',path)\n    if obj is None:print('Already\
-    \ absent:',path,flush=True);return\n    api('DELETE',path,{'apiVersion':'v1','kind':'DeleteOptions','preconditions':{'uid':obj['metadata']['uid']},'propagationPolicy':'Background'})\n\
+    \ {path}: HTTP {e.code}') from None\n        except (TimeoutError,urllib.error.URLError)\
+    \ as e:\n            reason=getattr(e,'reason',e)\n            print('API connection\
+    \ failed:',type(reason).__name__,str(reason)[:180],flush=True)\n        time.sleep(2+attempt)\n\
+    \    raise RuntimeError(f'{method} {path}: API unavailable')\n\ndef remove(path):\n\
+    \    obj=api('GET',path)\n    if obj is None:print('Already absent:',path,flush=True);return\n\
+    \    api('DELETE',path,{'apiVersion':'v1','kind':'DeleteOptions','preconditions':{'uid':obj['metadata']['uid']},'propagationPolicy':'Background'})\n\
     \    print('Deleted:',path,flush=True)\n\ndef preserve_cert_key(namespace,cert_name,key_name):\n\
     \    path='/api/v1/namespaces/'+namespace+'/secrets/'+key_name\n    key=api('GET',path,metadata=True)\n\
     \    if key is None:return\n    assert key['kind']=='PartialObjectMetadata','Secret\
@@ -298,7 +300,7 @@ roleRef:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: retire-legacy-apps-20261012
+  name: retire-legacy-apps-20261012-v2
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: '-10'
@@ -337,6 +339,9 @@ spec:
         - name: script
           mountPath: /cleanup
           readOnly: true
+        env:
+        - name: API_SERVER
+          value: https://192.168.1.2:16443
       volumes:
       - name: script
         configMap:
