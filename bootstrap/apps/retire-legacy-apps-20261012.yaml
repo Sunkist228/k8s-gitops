@@ -35,7 +35,7 @@ data:
     \    if key is None:return\n    assert key['kind']=='PartialObjectMetadata','Secret\
     \ data must never be fetched'\n    owners=key['metadata'].get('ownerReferences',[])\n\
     \    keep=[o for o in owners if not(o.get('kind')=='Certificate' and o.get('name')==cert_name)]\n\
-    \    if keep!=owners:\n        api('PATCH',path,{'metadata':{'resourceVersion':key['metadata']['resourceVersion'],'ownerReferences':keep}})\n\
+    \    if keep!=owners:\n        api('PATCH',path,{'metadata':{'resourceVersion':key['metadata']['resourceVersion'],'ownerReferences':keep}},metadata=True)\n\
     \        print('Preserved temporary TLS key data:',namespace+'/'+key_name,flush=True)\n\
     \n# Wait for the first GitOps stage, and fail closed before deleting anything.\n\
     protected=False\nfor attempt in range(12):\n    namespace=api('GET','/api/v1/namespaces/omnirouter')\n\
