@@ -270,7 +270,8 @@
           "decimals": 1,
           "color": {
             "mode": "palette-classic"
-          }
+          },
+          "noValue": "—"
         },
         "overrides": []
       },
@@ -660,7 +661,7 @@
             "uid": "prometheus"
           },
           "expr": "kv_leads_by_service{namespace=\"kv-group\",service=\"kv-group-analytics\"}",
-          "legendFormat": "{{service}}",
+          "legendFormat": "{{exported_service}}",
           "refId": "A",
           "instant": true,
           "range": false
