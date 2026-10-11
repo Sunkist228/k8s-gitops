@@ -1,0 +1,343 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+data:
+  cleanup.py: "import json,os,pathlib,ssl,time,urllib.error,urllib.request\n\nTOKEN=pathlib.Path('/var/run/secrets/kubernetes.io/serviceaccount/token').read_text().strip()\n\
+    BASE='https://'+os.environ['KUBERNETES_SERVICE_HOST']+':'+os.environ.get('KUBERNETES_SERVICE_PORT_HTTPS','443')\n\
+    SSL=ssl.create_default_context(cafile='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt')\n\
+    def api(method,path,body=None,metadata=False):\n    headers={'Authorization':'Bearer\
+    \ '+TOKEN,'Accept':'application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1'\
+    \ if metadata else 'application/json'}\n    if body is not None:headers['Content-Type']='application/merge-patch+json'\
+    \ if method=='PATCH' else 'application/json'\n    for attempt in range(4):\n \
+    \       try:\n            req=urllib.request.Request(BASE+path,data=json.dumps(body).encode()\
+    \ if body is not None else None,headers=headers,method=method)\n            with\
+    \ urllib.request.urlopen(req,context=SSL,timeout=15) as res:return json.load(res)\n\
+    \        except urllib.error.HTTPError as e:\n            if e.code==404:return\
+    \ None\n            if e.code not in [429,500,502,503,504]:raise RuntimeError(f'{method}\
+    \ {path}: HTTP {e.code}') from None\n        except (TimeoutError,urllib.error.URLError):pass\n\
+    \        time.sleep(2+attempt)\n    raise RuntimeError(f'{method} {path}: API\
+    \ unavailable')\n\ndef remove(path):\n    obj=api('GET',path)\n    if obj is None:print('Already\
+    \ absent:',path,flush=True);return\n    api('DELETE',path,{'apiVersion':'v1','kind':'DeleteOptions','preconditions':{'uid':obj['metadata']['uid']},'propagationPolicy':'Background'})\n\
+    \    print('Deleted:',path,flush=True)\n\ndef preserve_cert_key(namespace,cert_name,key_name):\n\
+    \    path='/api/v1/namespaces/'+namespace+'/secrets/'+key_name\n    key=api('GET',path,metadata=True)\n\
+    \    if key is None:return\n    assert key['kind']=='PartialObjectMetadata','Secret\
+    \ data must never be fetched'\n    owners=key['metadata'].get('ownerReferences',[])\n\
+    \    keep=[o for o in owners if not(o.get('kind')=='Certificate' and o.get('name')==cert_name)]\n\
+    \    if keep!=owners:\n        api('PATCH',path,{'metadata':{'resourceVersion':key['metadata']['resourceVersion'],'ownerReferences':keep}},metadata=True)\n\
+    \        print('Preserved temporary TLS key data:',namespace+'/'+key_name,flush=True)\n\
+    \n# Wait for the first GitOps stage, and fail closed before deleting anything.\n\
+    protected=False\nfor attempt in range(12):\n    namespace=api('GET','/api/v1/namespaces/omnirouter')\n\
+    \    protected=bool(namespace and 'Delete=false' in namespace['metadata'].get('annotations',{}).get('argocd.argoproj.io/sync-options',''))\n\
+    \    for name in ['omnirouter-basic-auth','omnirouter-env']:\n        secret=api('GET','/api/v1/namespaces/omnirouter/secrets/'+name,metadata=True)\n\
+    \        assert secret and secret['kind']=='PartialObjectMetadata'\n        protected=protected\
+    \ and 'Delete=false' in secret['metadata'].get('annotations',{}).get('argocd.argoproj.io/sync-options','')\n\
+    \    if protected:break\n    print('Waiting for namespace and Secret preservation\
+    \ annotations',flush=True)\n    time.sleep(10)\nassert protected,'Refusing cleanup\
+    \ until retained data is protected'\n\n# Preserve temporary private-key Secrets\
+    \ before deleting any parent ingress/cert.\nfor namespace,cert,key in [('plb','plb-tls','plb-tls-wdff2'),('devops-tools','ingress-manager-tls','ingress-manager-tls-rll9f')]:\n\
+    \    preserve_cert_key(namespace,cert,key)\n\n# This stale, unmanaged ConfigMap\
+    \ still advertises PLB domains. Keep all other keys.\npath='/api/v1/namespaces/devops-tools/configmaps/ingress-manager-api-config'\n\
+    config=api('GET',path)\nif config:\n    data=config.get('data',{})\n    changes={'AUTO_DOMAINS_BATCH':'\\\
+    n'.join(line for line in data.get('AUTO_DOMAINS_BATCH','').splitlines() if 'plbroker.ru'\
+    \ not in line)+'\\n'}\n    if 'plbroker.ru' in data.get('AUTO_DOMAIN_NAME',''):\n\
+    \        changes.update({'AUTO_DOMAIN_NAME':'','AUTO_DOMAIN_DISABLE':'1'})\n \
+    \   api('PATCH',path,{'metadata':{'resourceVersion':config['metadata']['resourceVersion']},'data':changes})\n\
+    \    print('Removed PLB domain generation from stale ingress-manager config',flush=True)\n\
+    \n# Delete only named resources; never Namespace, PVC, PV, Secret data, or databases.\n\
+    for name in ['frontend-admin-dev','frontend-dev']:\n    remove('/apis/apps/v1/namespaces/plb/deployments/'+name)\n\
+    for namespace,name in [('plb','plb-ingress'),('devops-tools','ingress-manager-ingress')]:\n\
+    \    remove('/apis/networking.k8s.io/v1/namespaces/'+namespace+'/ingresses/'+name)\n\
+    for namespace,name in [('plb','plb-tls'),('devops-tools','ingress-manager-tls'),('demo','father-testing-tls-secret'),('omnirouter','omnirouter-api-tls'),('omnirouter','omnirouter-tls')]:\n\
+    \    remove('/apis/cert-manager.io/v1/namespaces/'+namespace+'/certificates/'+name)\n\
+    print('Cleanup completed; PVC/PV and stored data are preserved',flush=True)\n"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: plb
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  resourceNames:
+  - frontend-admin-dev
+  - frontend-dev
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  resourceNames:
+  - plb-ingress
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  resourceNames:
+  - plb-tls
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  resourceNames:
+  - plb-tls-wdff2
+  verbs:
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: plb
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+subjects:
+- kind: ServiceAccount
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: retire-legacy-apps-20261012
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: devops-tools
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  resourceNames:
+  - ingress-manager-api-config
+  verbs:
+  - get
+  - patch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  resourceNames:
+  - ingress-manager-ingress
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  resourceNames:
+  - ingress-manager-tls
+  verbs:
+  - get
+  - delete
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  resourceNames:
+  - ingress-manager-tls-rll9f
+  verbs:
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: devops-tools
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+subjects:
+- kind: ServiceAccount
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: retire-legacy-apps-20261012
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: demo
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  resourceNames:
+  - father-testing-tls-secret
+  verbs:
+  - get
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: demo
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+subjects:
+- kind: ServiceAccount
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: retire-legacy-apps-20261012
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: omnirouter
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  resourceNames:
+  - omnirouter-basic-auth
+  - omnirouter-env
+  verbs:
+  - get
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  resourceNames:
+  - omnirouter-api-tls
+  - omnirouter-tls
+  verbs:
+  - get
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: omnirouter
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+subjects:
+- kind: ServiceAccount
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: retire-legacy-apps-20261012
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: retire-legacy-apps-20261012
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - namespaces
+  resourceNames:
+  - omnirouter
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: retire-legacy-apps-20261012
+  annotations:
+    argocd.argoproj.io/sync-wave: '-20'
+subjects:
+- kind: ServiceAccount
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: retire-legacy-apps-20261012
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: retire-legacy-apps-20261012
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '-10'
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app: retire-legacy-apps-20261012
+    spec:
+      serviceAccountName: retire-legacy-apps-20261012
+      restartPolicy: Never
+      containers:
+      - name: cleanup
+        image: python:3.13.15-trixie
+        imagePullPolicy: IfNotPresent
+        command:
+        - python
+        - -u
+        - /cleanup/cleanup.py
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: script
+          mountPath: /cleanup
+          readOnly: true
+      volumes:
+      - name: script
+        configMap:
+          name: retire-legacy-apps-20261012
