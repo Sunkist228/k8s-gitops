@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: kv-group
 
+patches:
+  - path: analytics-sidecar.yaml
+
 resources:
   - namespace.yaml
   - postgres.yaml
