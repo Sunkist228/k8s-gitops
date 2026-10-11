@@ -13,6 +13,7 @@ resources:
   - servicemonitors/playerok-metadata-collector-servicemonitor.yaml
   - servicemonitors/playerok-prod-servicemonitor.yaml
   - servicemonitors/stalwart-servicemonitor.yaml
+  - servicemonitors/kv-group-servicemonitor.yaml
   - rules/playerok-rules.yaml
   - rules/playerok-prod-rules.yaml
   - rules/mail-rules.yaml
@@ -28,6 +29,14 @@ generatorOptions:
   disableNameSuffixHash: true
 
 configMapGenerator:
+  - name: grafana-dashboard-kv-group-website
+    namespace: monitoring
+    files:
+      - kv-group-website.json=dashboards/kv-group-website.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+        app: kv-group
   - name: grafana-dashboard-playerok-platform-overview
     namespace: monitoring
     files:

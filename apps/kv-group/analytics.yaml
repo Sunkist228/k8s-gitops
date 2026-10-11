@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kv-group-analytics
+  labels:
+    app.kubernetes.io/name: kv-group-analytics
+spec:
+  selector:
+    app.kubernetes.io/name: kv-group-api
+  ports:
+    - name: metrics
+      port: 9108
+      targetPort: metrics
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kv-group-analytics
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kv-group-api
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9108
