@@ -6,3 +6,24 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+
+# Retire compute first; keep the namespace and Secret data during app deletion.
+replicas:
+  - name: omnirouter
+    count: 0
+patches:
+  - target:
+      kind: Namespace
+      name: omnirouter
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  - target:
+      kind: Secret
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          argocd.argoproj.io/sync-options: Prune=false,Delete=false
