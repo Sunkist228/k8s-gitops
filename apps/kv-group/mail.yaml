@@ -103,7 +103,7 @@ metadata:
     app.kubernetes.io/name: kv-group-mail-web-proxy
     app.kubernetes.io/part-of: kv-group
 spec:
-  replicas: 0
+  replicas: 1
   minReadySeconds: 15
   progressDeadlineSeconds: 300
   strategy:
