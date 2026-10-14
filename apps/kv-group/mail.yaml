@@ -85,6 +85,10 @@ data:
       listen 8080;
       server_name mail.kvteam.ru;
 
+      location = / {
+        return 302 /admin/;
+      }
+
       location / {
         proxy_pass http://kv-group-mail-web:8080;
         proxy_http_version 1.1;
@@ -129,14 +133,14 @@ spec:
               containerPort: 8080
           startupProbe:
             httpGet:
-              path: /.well-known/jmap
+              path: /healthz/ready
               port: 8080
             failureThreshold: 60
             periodSeconds: 2
             timeoutSeconds: 2
           readinessProbe:
             httpGet:
-              path: /.well-known/jmap
+              path: /healthz/ready
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
