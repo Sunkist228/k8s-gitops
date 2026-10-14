@@ -84,6 +84,7 @@ data:
     server {
       listen 8080;
       server_name mail.kvteam.ru;
+      absolute_redirect off;
 
       location = / {
         return 302 /admin/;
@@ -120,6 +121,8 @@ spec:
       app.kubernetes.io/name: kv-group-mail-web-proxy
   template:
     metadata:
+      annotations:
+        checksum/mail-web-proxy-config: 9446aee918401ea78afc46f1a20644ecd65b617593a8a2d94cae495e480c3e1c
       labels:
         app.kubernetes.io/name: kv-group-mail-web-proxy
         app.kubernetes.io/part-of: kv-group
